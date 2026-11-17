@@ -2,40 +2,41 @@ import Phaser from 'phaser'
 import { Fighter } from '../actors/Fighter.js'
 import { Dialogue } from '../ui/Dialogue.js'
 import { Standoff } from '../ui/Standoff.js'
+import { MixStandoff } from '../ui/MixStandoff.js'
 import { BEATS } from '../data/games.js'
+import { LEVELS } from '../data/levels.js'
 import { loadSave, writeSave } from '../systems/save.js'
 import { trackPresses } from '../systems/presses.js'
 import { playMusic, bindMuteKey, isMuted } from '../systems/audio.js'
 import { sfx } from '../systems/sfx.js'
 
-const LEVEL_W = 4200
 const LANE_TOP = 520
 const LANE_BOT = 660
 const DEPTH_TOL = 30
 const TINT = { strike: 0xff7a7a, guard: 0x8fb4ff, grab: 0xffe27a }
 const WALK_CYCLE = ['walk', 'walkpass', 'walk', 'walkb']
+const MOVE_COLOR = { strike: 0xff5fa2, guard: 0x5ce1d6, grab: 0xffd166 }
 const counterOf = (m) => Object.keys(BEATS).find((k) => BEATS[k] === m)
 
-// Checkpoints are indices into TRIGGERS.
-const TRIGGERS = [
-  { id: 'wave1', x: 560, cam: 0, spawn: [['grunt', 1420, 560, 0], ['grunt', 1500, 630, 0.9], ['grunt', -160, 600, 2.2]] },
-  { id: 'wave2', x: 1650, cam: 1150, spawn: [['grunt', 2520, 560, 0], ['reader', 2560, 630, 0.6], ['grunt', 1000, 600, 2.4]] },
-  { id: 'brick', x: 2650, cam: 2150, standoff: 'brick' },
-  { id: 'sadie', x: 3420, cam: LEVEL_W - 1280, standoff: 'sadie' },
-]
-
+// One street level, driven by LEVELS[id]: brawl waves, an elite standoff, a boss with three phases.
 export default class Street extends Phaser.Scene {
   constructor() { super('Street') }
 
   init(data) {
     const save = loadSave()
-    this.checkpoint = data.checkpoint ?? save.checkpoint ?? 0
-    this.bossPhase = this.checkpoint === 3 ? (data.bossPhase ?? save.bossPhase ?? 0) : 0
+    this.levelId = data.level || save.level || 'w1'
+    if (!LEVELS[this.levelId]) this.levelId = 'w1'
+    this.L = LEVELS[this.levelId]
+    this.W = this.L.width
+    const sameLevel = (save.level || 'w1') === this.levelId
+    this.checkpoint = data.checkpoint ?? (sameLevel ? save.checkpoint : 0) ?? 0
+    const bossIdx = this.L.triggers.findIndex((t) => t.standoff === 'boss')
+    this.bossPhase = this.checkpoint === bossIdx ? (data.bossPhase ?? (sameLevel ? save.bossPhase : 0) ?? 0) : 0
   }
 
   create() {
-    writeSave({ scene: 'Street', checkpoint: this.checkpoint, bossPhase: this.bossPhase })
-    playMusic(this, 'level_01')
+    writeSave({ scene: 'Street', level: this.levelId, checkpoint: this.checkpoint, bossPhase: this.bossPhase })
+    playMusic(this, this.L.music)
     bindMuteKey(this)
     this.cameras.main.fadeIn(400)
     this.buildWorld()
@@ -49,57 +50,78 @@ export default class Street extends Phaser.Scene {
     this.keys = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,K,X')
     this.presses = trackPresses(this)
     this.cam = this.cameras.main
-    this.cam.setBounds(0, 0, LEVEL_W, 720)
+    this.cam.setBounds(0, 0, this.W, 720)
     this.locked = null
     this.wave = null
     this.mode = 'brawl' // brawl | standoff | cutscene | dead
     this.done = new Set()
     this.elapsed = 0
+    // Phaser reuses this scene object on restart: clear anything left from the last run
+    this.so = null
+    this.boss = null
+    this.readerTalked = false
 
-    // resume from checkpoint
-    const cp = TRIGGERS[this.checkpoint]
-    TRIGGERS.slice(0, this.checkpoint).forEach((t) => this.done.add(t.id))
+    const cp = this.L.triggers[this.checkpoint]
+    this.L.triggers.slice(0, this.checkpoint).forEach((t) => this.done.add(t.id))
     if (this.checkpoint > 0) this.lisa.x = cp.x - 260
-    this.cam.scrollX = Phaser.Math.Clamp(this.lisa.x - 400, 0, LEVEL_W - 1280)
+    this.cam.scrollX = Phaser.Math.Clamp(this.lisa.x - 400, 0, this.W - 1280)
+    if (this.checkpoint === 0) this.showBanner()
     if (this.checkpoint === 0) {
       this.mode = 'cutscene'
-      this.dlg.play([
-        { who: 'tempo', text: "Neon Strip. Zero's crew runs these streets." },
-        { who: 'tempo', text: 'Every move beats one and loses to one: Strike beats Grab, Grab beats Guard, Guard beats Strike.' },
-        { who: 'tempo', text: 'Watch them wind up: red means a strike is coming, blue is a guard, yellow is a grab.' },
-        { who: 'lisa', text: 'J to strike, K to guard, L to grab. Got it.' },
-      ], () => { this.mode = 'brawl' })
+      this.time.delayedCall(1700, () => this.dlg.play(this.cued(this.L.intro), () => { this.mode = 'brawl' }))
     }
     this.goArrow = this.add.text(1180, 380, 'GO ▶', { fontFamily: 'Bangers', fontSize: '54px', color: '#ffd166', stroke: '#000', strokeThickness: 6 })
       .setScrollFactor(0).setDepth(5000).setVisible(false)
     this.tweens.add({ targets: this.goArrow, x: 1200, duration: 400, yoyo: true, repeat: -1 })
   }
 
+  showBanner() {
+    const t = this.add.text(640, 250, this.L.title, { fontFamily: 'Bangers', fontSize: '84px', color: '#ffd166', stroke: '#2a0f4a', strokeThickness: 10 })
+      .setOrigin(0.5).setScrollFactor(0).setDepth(6000).setAlpha(0)
+    const s = this.add.text(640, 318, this.L.chapter, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '24px', color: '#ffffff', stroke: '#000', strokeThickness: 5 })
+      .setOrigin(0.5).setScrollFactor(0).setDepth(6000).setAlpha(0)
+    this.tweens.add({ targets: [t, s], alpha: 1, duration: 300, hold: 900, yoyo: true, onComplete: () => { t.destroy(); s.destroy() } })
+  }
+
   // ---------------------------------------------------------------- world
   buildWorld() {
-    this.add.image(0, 0, 'strip_far').setOrigin(0, 0).setScrollFactor(0.12).setDepth(-1000)
-    const midScale = 0.86
+    const a = this.L.art
+    this.add.image(0, 0, a.far).setOrigin(0, 0).setScrollFactor(0.12).setDepth(-1000)
     let x = 0
-    ;['strip_mid_a', 'strip_mid_b', 'strip_mid_a', 'strip_mid_b'].forEach((k) => {
-      const m = this.add.image(x, 470, k).setOrigin(0, 1).setScale(midScale).setScrollFactor(0.45).setDepth(-900)
+    for (let i = 0; i < 4; i++) {
+      const m = this.add.image(x, 470, a.mids[i % a.mids.length]).setOrigin(0, 1).setScale(0.86).setScrollFactor(0.45).setDepth(-900)
       x += m.displayWidth - 2
-    })
-    this.add.tileSprite(0, 452, LEVEL_W, 270, 'strip_ground').setOrigin(0, 0).setDepth(-800)
-    this.stage = this.add.image(3560 + 160, 520, 'strip_stage').setOrigin(0.5, 1).setScale(0.95).setDepth(-700)
-    const fg = [['fg_lamp', 980, 0.95], ['fg_crates', 1640, 0.9], ['fg_lamp', 2420, 0.95], ['fg_bin', 3080, 0.85], ['fg_lamp', 3900, 0.95]]
-    fg.forEach(([k, fx, s]) => this.add.image(fx, 745, k).setOrigin(0.5, 1).setScale(s).setScrollFactor(1.25).setDepth(3000))
+    }
+    this.add.tileSprite(0, 452, this.W, 270, a.ground).setOrigin(0, 0).setDepth(-800)
+    this.add.image(a.stage.x, 520, a.stage.key).setOrigin(0.5, 1).setScale(a.stage.scale).setDepth(-700)
+    a.fg.forEach(([k, fx, s]) => this.add.image(fx, 745, k).setOrigin(0.5, 1).setScale(s).setScrollFactor(1.25).setDepth(3000))
   }
 
   buildHud() {
     const d = 5000
+    this.habitBars = null // per level (the scene object is reused between levels)
     this.add.rectangle(0, 676, 1280, 44, 0x0b0614, 0.75).setOrigin(0, 0).setScrollFactor(0).setDepth(d)
     this.add.image(28, 698, 'lisa_portrait').setDisplaySize(40, 40).setScrollFactor(0).setDepth(d)
     this.add.text(56, 686, 'LISA', { fontFamily: 'Bangers', fontSize: '24px', color: '#ff5fa2' }).setScrollFactor(0).setDepth(d)
     this.add.rectangle(112, 698, 260, 16, 0x3a1a5a).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d)
     this.hpBar = this.add.rectangle(112, 698, 260, 16, 0xff5fa2).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d)
-    this.add.text(640, 698, 'Strike ▶ Grab   ·   Grab ▶ Guard   ·   Guard ▶ Strike', {
+    const legendX = this.L.habitMeter ? 735 : 640
+    this.legend = this.add.text(legendX, 698, 'Strike ▶ Grab   ·   Grab ▶ Guard   ·   Guard ▶ Strike', {
       fontFamily: 'Nunito', fontStyle: '800', fontSize: '16px', color: '#e8dcff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(d)
+    if (this.L.habitMeter) {
+      // the MIX meter: Lisa's last eight moves, as the dealers see them
+      this.mixParts = [this.add.text(388, 698, 'MIX', { fontFamily: 'Bangers', fontSize: '22px', color: '#ffd166' }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d)]
+      this.habitBars = ['strike', 'guard', 'grab'].map((m, i) => {
+        const x = 428 + i * 32
+        const back = this.add.rectangle(x, 714, 28, 34, 0x2a0f4a).setOrigin(0, 1).setScrollFactor(0).setDepth(d)
+        const bar = this.add.rectangle(x, 714, 28, 0, MOVE_COLOR[m]).setOrigin(0, 1).setScrollFactor(0).setDepth(d)
+        const lab = this.add.text(x + 14, 697, m === 'strike' ? 'S' : m === 'guard' ? 'G' : 'Gr', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '13px', color: '#fff', stroke: '#000', strokeThickness: 3 })
+          .setOrigin(0.5).setScrollFactor(0).setDepth(d + 1)
+        this.mixParts.push(back, bar, lab)
+        return { m, bar }
+      })
+    }
     this.muteLabel = this.add.text(1252, 652, '', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '15px', color: '#b9a6e0' })
       .setOrigin(1, 0).setScrollFactor(0).setDepth(d)
     this.foeLabel = this.add.text(1252, 686, '', { fontFamily: 'Bangers', fontSize: '24px', color: '#ff9a5c' }).setOrigin(1, 0).setScrollFactor(0).setDepth(d)
@@ -107,22 +129,28 @@ export default class Street extends Phaser.Scene {
     this.foeBar = this.add.rectangle(1000, 698, 160, 16, 0xff9a5c).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d).setVisible(false)
   }
 
+  // Tempo's caption: a box that grows to fit its text; y defaults to the top-right slot
   buildCaption() {
     const c = this.add.container(0, 0).setScrollFactor(0).setDepth(4300).setVisible(false)
     const g = this.add.graphics()
-    g.fillStyle(0x0d0820, 0.9).fillRoundedRect(560, 16, 696, 96, 12).lineStyle(2, 0xffd166, 1).strokeRoundedRect(560, 16, 696, 96, 12)
-    const icon = this.add.image(606, 64, 'tempo_sprite').setScale(0.36)
-    const t = this.add.text(650, 30, '', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '21px', color: '#fff', wordWrap: { width: 590 } })
+    const icon = this.add.image(606, 0, 'tempo_sprite').setScale(0.32)
+    const t = this.add.text(650, 0, '', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '18px', color: '#fff', wordWrap: { width: 590 }, lineSpacing: 2 })
     c.add([g, icon, t])
     return {
-      show: (s) => { t.setText(s); c.setVisible(true).setAlpha(1) },
+      show: (s, y = 16) => {
+        t.setText(s).setY(y + 12)
+        const h = Math.max(70, t.height + 24)
+        g.clear().fillStyle(0x0d0820, 0.92).fillRoundedRect(560, y, 696, h, 12).lineStyle(2, 0xffd166, 1).strokeRoundedRect(560, y, 696, h, 12)
+        icon.setY(y + h / 2)
+        c.setVisible(true).setAlpha(1)
+      },
       hide: () => c.setVisible(false),
     }
   }
 
   // ---------------------------------------------------------------- fx
-  floatText(x, y, s, color = '#fff') {
-    const t = this.add.text(x, y, s, { fontFamily: 'Bangers', fontSize: '40px', color, stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(4100)
+  floatText(x, y, s, color = '#fff', depth = 4100) {
+    const t = this.add.text(x, y, s, { fontFamily: 'Bangers', fontSize: '40px', color, stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(depth)
     this.tweens.add({ targets: t, y: y - 60, alpha: 0, duration: 900, ease: 'Cubic.out', onComplete: () => t.destroy() })
   }
 
@@ -133,13 +161,14 @@ export default class Street extends Phaser.Scene {
 
   // ---------------------------------------------------------------- enemies
   spawn(kind, x, y) {
-    const prefix = kind === 'reader' ? 'grunt' : kind
-    const e = new Fighter(this, prefix, x, y, { hp: kind === 'reader' ? 5 : 4 })
-    Object.assign(e, { kind, st: 'free', t: 0, wait: 0.6 + Math.random() * 0.8, laneOff: Phaser.Math.Between(-10, 10) })
+    const prefix = kind === 'dealer' ? 'dealer' : 'grunt'
+    const e = new Fighter(this, prefix, x, y, { hp: kind === 'grunt' ? 4 : 5 })
+    Object.assign(e, { kind, st: 'free', t: 0, wait: 0.6 + Math.random() * 0.8, laneOff: Phaser.Math.Between(kind === 'dealer' ? -26 : -10, kind === 'dealer' ? 26 : 10) })
     if (kind === 'reader') {
       e.shadow.setFillStyle(0xa25cff, 0.7)
       e.tag = this.add.text(x, y - 270, 'READER', { fontFamily: 'Bangers', fontSize: '22px', color: '#c79bff', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5)
     }
+    if (kind === 'dealer') e.shadow.setFillStyle(0xa25cff, 0.55)
     e.face(x > this.lisa.x ? -1 : 1)
     this.enemies.push(e)
     return e
@@ -159,7 +188,7 @@ export default class Street extends Phaser.Scene {
     e.tint(null)
     this.floatText(e.x, e.y - 260, `-${dmg}`, '#ffd166')
     this.spark(e.x - 20 * this.lisa.facing, e.y - 170)
-    e.x = Phaser.Math.Clamp(e.x + knock * this.lisa.facing, 20, LEVEL_W - 20)
+    e.x = Phaser.Math.Clamp(e.x + knock * this.lisa.facing, 20, this.W - 20)
     if (e.hp <= 0 || down) {
       e.st = 'down'; e.t = 0; e.setPose('hurt')
       this.time.delayedCall(260, () => sfx(this, 'thud'))
@@ -189,7 +218,6 @@ export default class Street extends Phaser.Scene {
   // ---------------------------------------------------------------- lisa
   updateLisa(dt) {
     const L = this.lisa, k = this.keys
-    const JD = Phaser.Input.Keyboard.JustDown
     L.t += dt
     L.invuln = Math.max(0, L.invuln - dt)
     const p = this.presses
@@ -205,8 +233,8 @@ export default class Street extends Phaser.Scene {
       L.x += vx * 300 * dt
       L.y = Phaser.Math.Clamp(L.y + vy * 170 * dt, LANE_TOP, LANE_BOT)
       L.face(vx)
-      const minX = this.locked != null ? this.locked + 50 : 40
-      const maxX = this.locked != null ? this.locked + 1230 : LEVEL_W - 60
+      const minX = this.locked != null ? this.locked + 90 : 40
+      const maxX = this.locked != null ? this.locked + 1190 : this.W - 60
       L.x = Phaser.Math.Clamp(L.x, minX, maxX)
       const moving = vx || vy
       if (moving) {
@@ -259,7 +287,8 @@ export default class Street extends Phaser.Scene {
         this.floatText(e.x, e.y - 270, 'BLOCKED', '#8fb4ff')
         sfx(this, 'block')
         L.st = 'recoil'; L.t = 0; L.setPose('hurt')
-        L.x -= 30 * L.facing
+        if (e.kind === 'dealer') { e.st = 'strike'; e.t = 0.25; e.hitDone = false; e.tint(TINT.strike) } // parry, then riposte (no push-back)
+        else L.x -= 30 * L.facing
         return
       }
       const strong = L.combo === 3
@@ -281,19 +310,35 @@ export default class Street extends Phaser.Scene {
     }
     this.floatText(e.x, e.y - 280, 'THROW!', '#ffe27a')
     this.hurtEnemy(e, 2, 0, true)
-    const lo = this.locked != null ? this.locked + 60 : 30, hi = this.locked != null ? this.locked + 1220 : LEVEL_W - 30
+    const lo = this.locked != null ? this.locked + 60 : 30, hi = this.locked != null ? this.locked + 1220 : this.W - 30
     this.tweens.add({ targets: e, x: Phaser.Math.Clamp(e.x + 170 * L.facing, lo, hi), duration: 300, ease: 'Quad.out' })
   }
 
   // ---------------------------------------------------------------- enemy ai
+  // Readers counter Lisa's favourite move. Dealers best-respond to the frequencies of her last 8 moves, the
+  // steady-state reading of section 3.2.2: against an even mix every answer is as good, so they have no read.
   pickMove(e) {
+    if (e.kind === 'dealer') {
+      const h = this.lisa.habits.slice(-8)
+      if (h.length >= 3 && Math.random() < 0.85) {
+        const f = { strike: 0, guard: 0, grab: 0 }
+        h.forEach((m) => f[m]++)
+        const score = (mine) => Object.keys(f).reduce((s, hers) => s + f[hers] * (BEATS[mine] === hers ? 1 : BEATS[hers] === mine ? -1 : 0), 0)
+        const vals = ['strike', 'guard', 'grab'].map((m) => [m, score(m)])
+        const top = Math.max(...vals.map((v) => v[1]))
+        if (top > 1) return Phaser.Utils.Array.GetRandom(vals.filter((v) => v[1] === top))[0] // a near-even 3/3/2 mix gives no read
+      }
+      return Phaser.Utils.Array.GetRandom(['strike', 'strike', 'grab', 'guard'])
+    }
     if (e.kind === 'reader') {
       const h = this.lisa.habits.slice(-6)
-      if (h.length >= 2 && Math.random() < 0.8) {
+      const sharp = 0.8
+      if (h.length >= 2 && Math.random() < sharp) {
         const counts = { strike: 0, guard: 0, grab: 0 }
         h.forEach((m) => counts[m]++)
-        const fav = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0]
-        return counterOf(fav)
+        const top = Math.max(...Object.values(counts))
+        const favs = Object.keys(counts).filter((m) => counts[m] === top)
+        if (favs.length === 1) return counterOf(favs[0])
       }
       return Phaser.Utils.Array.GetRandom(['strike', 'guard', 'grab'])
     }
@@ -320,15 +365,18 @@ export default class Street extends Phaser.Scene {
       if (e.st === 'free') {
         const rank = byDist.indexOf(e)
         const side = Math.sign(e.x - L.x) || 1
-        const tx = L.x + side * (rank < 2 ? 112 : 280)
+        let tx = L.x + side * (rank < 2 ? 112 : 280)
+        if (this.locked != null) tx = Phaser.Math.Clamp(tx, this.locked + 70, this.locked + 1210)
         const ty = Phaser.Math.Clamp(L.y + e.laneOff, LANE_TOP, LANE_BOT)
         const dx = tx - e.x, dy = ty - e.y
         if (Math.abs(dx) > 10) e.x += Math.sign(dx) * Math.min(Math.abs(dx), 150 * dt)
         if (Math.abs(dy) > 6) e.y += Math.sign(dy) * Math.min(Math.abs(dy), 100 * dt)
         e.face(L.x > e.x ? 1 : -1)
         e.wait -= dt
-        const close = Math.abs(e.x - L.x) < 150 && Math.abs(e.y - L.y) < 22
+        const onScreen = this.locked == null || (e.x > this.locked + 40 && e.x < this.locked + 1240)
+        const close = onScreen && Math.abs(e.x - L.x) < 150 && Math.abs(e.y - L.y) < 22
         if (close && e.wait <= 0 && rank < 2) {
+          if (e.kind === 'dealer') e.wait = 0 // dealers press harder
           const mv = this.pickMove(e)
           if (mv !== 'guard' && attackers >= 1) { e.wait = 0.3; continue }
           e.st = mv; e.t = 0; e.hitDone = false
@@ -351,7 +399,7 @@ export default class Street extends Phaser.Scene {
             } else this.hurtLisa(2, false, e)
           }
         }
-        if (e.t > 0.85) { e.st = 'free'; e.t = 0; e.setPose('idle'); e.wait = 0.6 + Math.random() * 0.7 }
+        if (e.st === 'strike' && e.t > 0.85) { e.st = 'free'; e.t = 0; e.setPose('idle'); e.wait = 0.6 + Math.random() * 0.7 }
       } else if (e.st === 'grab') {
         if (!e.hitDone && e.t > 0.45) {
           e.hitDone = true; e.setPose('grab'); e.tint(null)
@@ -370,16 +418,17 @@ export default class Street extends Phaser.Scene {
 
   // ---------------------------------------------------------------- triggers
   checkTriggers() {
-    for (let i = 0; i < TRIGGERS.length; i++) {
-      const tr = TRIGGERS[i]
+    const T = this.L.triggers
+    for (let i = 0; i < T.length; i++) {
+      const tr = T[i]
       if (this.done.has(tr.id) || this.lisa.x < tr.x) continue
       this.done.add(tr.id)
       this.checkpoint = i
-      writeSave({ checkpoint: i, bossPhase: i === 3 ? this.bossPhase : 0 })
+      writeSave({ level: this.levelId, checkpoint: i, bossPhase: tr.standoff === 'boss' ? this.bossPhase : 0 })
       this.lockAt(tr.cam)
-      if (tr.spawn) this.startWave(tr)
-      else if (tr.standoff === 'brick') this.startBrick()
-      else this.startSadie()
+      if (tr.spawn) this.startWave(tr.spawn)
+      else if (tr.standoff === 'elite') this.startElite()
+      else this.startBoss()
       return
     }
   }
@@ -397,21 +446,16 @@ export default class Street extends Phaser.Scene {
     this.time.delayedCall(2500, () => this.goArrow.setVisible(false))
   }
 
-  startWave(tr, onClear) {
-    this.wave = { onClear: onClear || (() => this.unlock()) }
-    tr.spawn.forEach(([kind, x, y, delay]) => this.time.delayedCall(delay * 1000, () => {
-      const e = this.spawn(kind, x, y)
-      if (kind === 'reader' && !this.readerTalked) {
+  // spawn: [[kind, x, y, delay]]; x is absolute, or relative to the locked camera when `relative`
+  startWave(spawn, onClear, relative = false) {
+    this.wave = { onClear: onClear || (() => this.unlock()), count: spawn.length }
+    spawn.forEach(([kind, x, y, delay]) => this.time.delayedCall(delay * 1000, () => {
+      this.spawn(kind, relative ? this.locked + x : x, y)
+      if (kind === 'reader' && this.L.readerTalk && !this.readerTalked) {
         this.readerTalked = true
-        this.time.delayedCall(700, () => this.talk([
-          { who: 'tempo', text: 'Purple shadow! That one watches your last few moves and counters your favourite.' },
-          { who: 'tempo', text: "Mash one button and it'll read you like a book. Mix it up." },
-        ]))
+        this.time.delayedCall(700, () => this.talk(this.L.readerTalk))
       }
-      return e
     }))
-    this.wave.count = tr.spawn.length
-    this.wave.spawned = () => this.enemies.length
   }
 
   checkWave() {
@@ -433,6 +477,14 @@ export default class Street extends Phaser.Scene {
   }
 
   // ---------------------------------------------------------------- standoffs
+  makeStandoff(cfg, enemy, handlers) {
+    const Cls = cfg.kind === 'mix' ? MixStandoff : Standoff
+    return new Cls(this, {
+      lisa: this.lisa, enemy, enemyName: cfg.name, pronoun: cfg.pronoun, phases: cfg.phases,
+      say: (s, y) => this.caption.show(s, y), onLose: () => this.die(), ...handlers,
+    })
+  }
+
   placeForStandoff(enemy) {
     const L = this.lisa
     this.toFree()
@@ -443,130 +495,97 @@ export default class Street extends Phaser.Scene {
     enemy.face(-1)
   }
 
-  startBrick() {
+  startElite() {
+    const cfg = this.L.elite
     this.mode = 'cutscene'
-    const b = new Fighter(this, 'brick', this.locked + 1450, 600, { hp: 3 })
+    if (this.lisa.hp < this.lisa.maxHp) { this.lisa.hp = this.lisa.maxHp; this.floatText(this.lisa.x, this.lisa.y - 280, 'FULL HEALTH', '#7dffb0') }
+    const b = new Fighter(this, cfg.prefix, this.locked + 1450, 600, { hp: 3 })
+    b.face(-1)
     this.boss = b
-    this.foeLabel.setText('BRICK')
+    this.foeLabel.setText(cfg.label)
     this.placeForStandoff(b)
-    this.time.delayedCall(950, () => this.talk([
-      { who: 'brick', text: 'Nobody gets past Brick.' },
-      { who: 'tempo', text: "He's too big to brawl. This is a standoff: you both pick a move at the same moment." },
-      { who: 'tempo', text: 'The card shows your points for every pair of moves.' },
-      { who: 'tempo', text: 'Brick answers whatever you keep doing. So for each move, look for the worst he can do to you.' },
-      { who: 'tempo', text: 'Then pick the move whose worst case is best. Score what the card can guarantee you, and your hit lands.' },
-    ], () => {
+    this.time.delayedCall(950, () => this.talk(this.once('elite', cfg.intro), () => {
       this.mode = 'standoff'
-      this.so = new Standoff(this, {
-        lisa: this.lisa, enemy: b, enemyName: 'Brick', phases: [{ hp: 3, view: 'lisa', fog: false, value: 1 }],
-        say: (s) => this.caption.show(s),
-        onLose: () => this.die(),
-        onPhaseWin: () => this.brickDown(),
-      })
+      this.so = this.makeStandoff(cfg, b, { onPhaseWin: () => this.eliteDown() })
       this.so.startPhase(0)
     }))
   }
 
-  brickDown() {
+  eliteDown() {
     const b = this.boss
     this.caption.hide()
     b.setPose('hurt')
+    sfx(this, 'thud')
     this.tweens.add({ targets: b.sprite, angle: 80, alpha: 0, duration: 900, delay: 300 })
     this.tweens.add({ targets: b.shadow, alpha: 0, duration: 900, delay: 300 })
     this.mode = 'cutscene'
-    this.time.delayedCall(700, () => this.talk([
-      { who: 'brick', text: '...Fine. Go.' },
-      { who: 'tempo', text: "That's minimax: pick the move with the best guarantee." },
-      { who: 'tempo', text: "In a fight where his win is your loss, that's a steady state. Neither of you wants to switch." },
-      { who: 'lisa', text: 'Mini... Max. Huh. Guess the name fits.' },
-    ], () => {
+    this.time.delayedCall(700, () => this.talk(this.cued(this.L.elite.outro), () => {
       this.boss = null
+      this.so = null
       this.foeLabel.setText('')
       this.mode = 'brawl'
       this.unlock()
     }))
   }
 
-  startSadie() {
+  startBoss() {
+    const cfg = this.L.boss
     this.mode = 'cutscene'
     this.lisa.hp = this.lisa.maxHp
-    const s = new Fighter(this, 'sadie', this.locked + 960, 520, { hp: 3 })
+    const s = new Fighter(this, cfg.prefix, this.locked + 960, cfg.standY, { hp: 3 })
     this.boss = s
     s.face(-1)
-    this.foeLabel.setText('SADIE POINT')
+    this.foeLabel.setText(cfg.label)
     this.toFree()
-    const PH = [
-      [
-        { who: 'sadie', text: 'Zero says every fight has a loser. Want to guess who?' },
-        { who: 'tempo', text: "Her card is nasty. Every move can cost you. Find the one that costs the least, worst case." },
-        { who: 'lisa', text: "Let's read the card and find out." },
-      ],
-      [
-        { who: 'sadie', text: "Let's see you read a card you can't see." },
-        { who: 'tempo', text: "Some cells are hidden. You don't need them all. One bad cell is enough to sink a move." },
-      ],
-      [
-        { who: 'sadie', text: "Fine. Here's MY card. My winnings, not yours." },
-        { who: 'tempo', text: 'Every point she wins, you lose. Her +2 is your −2. Flip it in your head.' },
-      ],
-    ]
-    this.so = new Standoff(this, {
-      lisa: this.lisa, enemy: s, enemyName: 'Sadie',
-      phases: [{ hp: 3, view: 'lisa', fog: false, value: -1 }, { hp: 3, view: 'lisa', fog: true, value: 1 }, { hp: 3, view: 'enemy', fog: false, value: -1 }],
-      say: (t) => this.caption.show(t),
-      onLose: () => this.die(),
+    this.so = this.makeStandoff(cfg, s, {
       onPhaseWin: (i) => {
         this.caption.hide()
-        if (i === 2) return this.sadieDown()
+        if (i === cfg.phases.length - 1) return this.bossDown()
         this.bossPhase = i + 1
-        writeSave({ checkpoint: 3, bossPhase: this.bossPhase }) // saved rounds
+        writeSave({ level: this.levelId, checkpoint: this.checkpoint, bossPhase: this.bossPhase }) // saved rounds
         this.mode = 'cutscene'
         s.setPose('hurt')
-        this.tweens.add({ targets: s, x: this.locked + 1000, y: 520, duration: 600 })
-        this.time.delayedCall(700, () => this.talk([{ who: 'sadie', text: 'Crew! Ruin her night.' }], () => {
+        sfx(this, 'hitHeavy')
+        this.tweens.add({ targets: s, x: this.locked + 1000, y: cfg.standY, duration: 600 })
+        this.time.delayedCall(700, () => this.talk([cfg.taunt], () => {
           this.mode = 'brawl'
           s.setPose('idle')
-          const cx = this.locked
-          this.startWave({ spawn: [['grunt', cx + 1400, 560, 0], [i === 0 ? 'grunt' : 'reader', cx - 140, 630, 0.6]] }, () => {
+          this.startWave(cfg.interludes[i] || cfg.interludes[0], () => {
             this.lisa.hp = Math.min(this.lisa.maxHp, this.lisa.hp + 6)
             this.floatText(this.lisa.x, this.lisa.y - 280, '+6', '#7dffb0')
-            this.beginSadiePhase(i + 1, PH)
-          })
+            this.beginBossPhase(i + 1)
+          }, true)
         }))
       },
     })
-    this.time.delayedCall(400, () => this.beginSadiePhase(this.bossPhase, PH))
+    this.time.delayedCall(400, () => this.beginBossPhase(this.bossPhase))
   }
 
-  beginSadiePhase(i, PH) {
+  beginBossPhase(i) {
     this.mode = 'cutscene'
     this.placeForStandoff(this.boss)
-    this.time.delayedCall(950, () => this.talk(PH[i], () => {
+    this.time.delayedCall(950, () => this.talk(this.once(`boss${i}`, this.L.boss.phaseIntros[i]), () => {
       this.mode = 'standoff'
       this.so.startPhase(i)
     }))
   }
 
-  sadieDown() {
+  bossDown() {
     const s = this.boss
     this.mode = 'cutscene'
+    this.foeLabel.setText('')
     s.setPose('hurt')
     this.tweens.add({ targets: s.sprite, angle: 75, duration: 500 })
     const page = this.add.image(s.x, s.y - 200, 'setlist_page').setDepth(4500)
     sfx(this, 'ko')
     this.time.delayedCall(900, () => sfx(this, 'page'))
     this.tweens.add({ targets: page, x: this.lisa.x + 40, y: this.lisa.y - 300, angle: 720, duration: 1200, ease: 'Sine.inOut' })
-    this.time.delayedCall(900, () => this.talk([
-      { who: 'sadie', text: 'Zero said... every fight has a loser.' },
-      { who: 'lisa', text: 'This one did. Not every game is a fight, though.' },
-      { who: 'tempo', text: 'Page one of the setlist! Hold it up, Lisa.' },
-      { who: 'juno', text: 'Lisa? I can hear you through the song. Keep going.' },
-      { who: 'tempo', text: "The next page flew toward the Casino Arcade. Zero's watching." },
-    ], () => {
+    this.time.delayedCall(900, () => this.talk(this.cued(this.L.boss.outro), () => {
       this.tweens.add({ targets: page, x: this.locked + 1400, y: 120, duration: 1400, ease: 'Sine.in' })
-      writeSave({ checkpoint: 0, bossPhase: 0, cleared1: true })
+      const next = this.L.end.next
+      writeSave({ level: next ? next.level : this.levelId, checkpoint: 0, bossPhase: 0, [`cleared_${this.levelId}`]: true })
       this.cam.fadeOut(1200)
-      this.cam.once('camerafadeoutcomplete', () => this.scene.start('End'))
+      this.cam.once('camerafadeoutcomplete', () => this.scene.start('End', { level: this.levelId }))
     }))
   }
 
@@ -584,7 +603,43 @@ export default class Street extends Phaser.Scene {
       .setOrigin(0.5).setScrollFactor(0).setDepth(6000)
     t.setScale(0.5)
     this.tweens.add({ targets: t, scale: 1, duration: 300, ease: 'Back.out' })
-    this.time.delayedCall(2000, () => this.scene.restart({ checkpoint: this.checkpoint, bossPhase: this.bossPhase }))
+    this.time.delayedCall(2000, () => this.scene.restart({ level: this.levelId, checkpoint: this.checkpoint, bossPhase: this.bossPhase }))
+  }
+
+  // After a knockout, skip the long explanation and keep just the first line (the enemy's taunt).
+  once(key, lines) {
+    const k = `seen:${this.levelId}:${key}`
+    if (this.registry.get(k)) return [lines[0], { who: 'tempo', text: 'Same rules. You know this one.' }]
+    this.registry.set(k, true)
+    return this.cued(lines)
+  }
+
+  // Lines may carry a `cue`: a small staged moment that shows the villain instead of telling.
+  cued(lines) {
+    return lines.map((l) => (l.cue ? { ...l, do: () => this.cue(l.cue) } : l))
+  }
+
+  cue(name) {
+    const cx = (this.locked ?? this.cam.scrollX) + 640
+    if (name === 'zeroScreen') {
+      // Zero on a giant casino screen above the floor
+      const frame = this.add.rectangle(cx, 250, 360, 300, 0x0d0820, 0.9).setStrokeStyle(6, 0xffd166).setDepth(2950)
+      const z = this.add.image(cx, 392, 'zero_idle').setOrigin(0.5, 1).setScale(0.5).setDepth(2951)
+      const scan = this.add.rectangle(cx, 250, 348, 288, 0x5ce1d6, 0.08).setDepth(2952)
+      this.tweens.add({ targets: [z, scan], alpha: { from: 0.55, to: 1 }, duration: 90, yoyo: true, repeat: 5, onComplete: () => { z.setAlpha(1); scan.setAlpha(0.6) } })
+      this.zeroScreen = [frame, z, scan]
+    } else if (name === 'zeroScreenOff' && this.zeroScreen) {
+      const parts = this.zeroScreen
+      this.zeroScreen = null
+      this.tweens.add({ targets: parts, alpha: 0, scaleY: 0.02, duration: 260, onComplete: () => parts.forEach((p) => p.destroy()) })
+      sfx(this, 'block')
+    } else if (name === 'zeroSweep') {
+      // a ghostly Zero steps out, sweeps the table, and fades
+      const z = this.add.image(cx + 380, 600, 'zero_idle').setOrigin(0.5, 1).setScale(0.5).setAlpha(0).setFlipX(true).setDepth(3500)
+      this.tweens.add({ targets: z, alpha: 0.75, x: cx + 300, duration: 500 })
+      this.tweens.add({ targets: z, alpha: 0, duration: 700, delay: 2600, onComplete: () => z.destroy() })
+      sfx(this, 'sting')
+    }
   }
 
   // ---------------------------------------------------------------- loop
@@ -598,7 +653,7 @@ export default class Street extends Phaser.Scene {
       this.checkWave()
       if (!this.wave && this.locked == null) {
         this.checkTriggers()
-        this.cam.scrollX = Phaser.Math.Linear(this.cam.scrollX, Phaser.Math.Clamp(this.lisa.x - 450, 0, LEVEL_W - 1280), 0.12)
+        this.cam.scrollX = Phaser.Math.Linear(this.cam.scrollX, Phaser.Math.Clamp(this.lisa.x - 450, 0, this.W - 1280), 0.12)
       }
     } else if (this.mode === 'standoff' && this.so) this.so.update(dt)
     // sync visuals
@@ -617,22 +672,30 @@ export default class Street extends Phaser.Scene {
     this.foeBar.setVisible(!!foe); this.foeBack.setVisible(!!foe)
     if (foe) this.foeBar.setScale(Math.max(0, foe.hp / foe.phases[foe.phaseIdx].hp), 1)
     this.foeLabel.setX(foe ? 990 : 1252)
+    this.legend.setVisible(!foe) // the brawl triangle does not apply in standoffs
+    if (this.mixParts) this.mixParts.forEach((o) => o.setVisible(!foe))
+    if (this.habitBars) {
+      const h = L.habits
+      this.habitBars.forEach(({ m, bar }) => bar.setSize(28, h.length ? (34 * h.filter((x) => x === m).length) / 8 : 0))
+    }
     this.muteLabel.setText(isMuted() ? 'M: music off' : 'M: music on')
     this.presses.clear()
   }
 
   debugState() {
-    const so = this.so && this.so.active ? { A: this.so.A, saddle: this.so.saddle, value: this.so.value, view: this.so.view, hp: this.so.hp, phase: this.so.phaseIdx, waiting: this.so.waiting } : null
+    const so = this.so && this.so.active
+      ? { kind: this.so.kind || 'pure', A: this.so.A, saddle: this.so.saddle, value: this.so.value, p: this.so.p, v12: this.so.v12, wheel: this.so.w, view: this.so.view, hp: this.so.hp, phase: this.so.phaseIdx, waiting: this.so.waiting }
+      : null
     return {
-      scene: 'Street', mode: this.mode, checkpoint: this.checkpoint, locked: this.locked,
-      lisa: { x: Math.round(this.lisa.x), y: Math.round(this.lisa.y), hp: this.lisa.hp, st: this.lisa.st },
+      scene: 'Street', level: this.levelId, mode: this.mode, checkpoint: this.checkpoint, locked: this.locked,
+      lisa: { x: Math.round(this.lisa.x), y: Math.round(this.lisa.y), hp: this.lisa.hp, st: this.lisa.st, habits: this.lisa.habits.join(',') },
       enemies: this.alive().map((e) => ({ kind: e.kind, x: Math.round(e.x), hp: e.hp, st: e.st })),
       standoff: so, dialogue: this.dlg.active,
     }
   }
 
   debugSolve() {
-    if (this.so && this.so.active) { this.so.solve(); return 'picked maxmin row' }
+    if (this.so && this.so.active) { this.so.solve(); return 'played the equilibrium' }
     this.alive().forEach((e) => { e.hp = 0; e.st = 'down'; e.t = 1 })
     return 'cleared enemies'
   }

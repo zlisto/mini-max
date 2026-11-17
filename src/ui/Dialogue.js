@@ -9,6 +9,9 @@ const WHO = {
   sadie: { name: 'SADIE POINT', key: 'sadie_portrait', side: 'right', color: '#f4f4ff' },
   brick: { name: 'BRICK', key: 'brick_idle', side: 'right', color: '#ff9a5c' },
   grunt: { name: 'GRUNT', key: 'grunt_idle', side: 'right', color: '#cccccc' },
+  penny: { name: 'PENNY ANTE', key: 'penny_portrait', side: 'right', color: '#ffd166' },
+  lou: { name: 'LUCKY LOU', key: 'lou_portrait', side: 'right', color: '#ff6b7a' },
+  dealer: { name: 'DEALER', key: 'dealer_idle', side: 'right', color: '#ff9a5c' },
 }
 
 // Bottom (or top) dialogue box with portrait and typewriter text. Lines: [{who, text}] (who omitted = caption).

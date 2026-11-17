@@ -130,7 +130,7 @@ export default class Prologue extends Phaser.Scene {
 
   leave() {
     this.cameras.main.fadeOut(700)
-    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Street', { checkpoint: 0 }))
+    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Street', { level: 'w1', checkpoint: 0 }))
   }
 
   update(_, dms) {

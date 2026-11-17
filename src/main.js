@@ -19,7 +19,7 @@ const game = new Phaser.Game({
 const SCENES = ['Title', 'Prologue', 'Street', 'End']
 window.__minimax = {
   game,
-  // warp('Street', { checkpoint: 2 })  checkpoints: 0 start, 1 second wave, 2 Brick standoff, 3 Sadie boss
+  // warp('Street', { level: 'w2', checkpoint: 2 })  checkpoints: 0 start, 1 second wave, 2 elite standoff, 3 boss
   warp(name, data = {}) {
     SCENES.forEach((s) => game.scene.isActive(s) && game.scene.stop(s))
     game.scene.start(name, data)

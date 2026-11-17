@@ -1,6 +1,8 @@
 import Phaser from 'phaser'
 import { playMusic, bindMuteKey } from '../systems/audio.js'
 import { sfx } from '../systems/sfx.js'
+import { loadSave } from '../systems/save.js'
+import { LEVELS } from '../data/levels.js'
 
 export default class Title extends Phaser.Scene {
   constructor() { super('Title') }
@@ -18,27 +20,42 @@ export default class Title extends Phaser.Scene {
     this.add.text(640, 290, 'starring Lisa "Mini" Maxobal', { fontFamily: 'Bangers', fontSize: '38px', color: '#ffd166' }).setOrigin(0.5)
     this.add.text(640, 334, 'Every fight is a game. Learn to play it.', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '24px', color: '#e8dcff' }).setOrigin(0.5)
 
-    const start = this.add.text(640, 430, 'PRESS ENTER', { fontFamily: 'Bangers', fontSize: '44px', color: '#fff' }).setOrigin(0.5)
+    // Enter continues a saved game; a fresh player starts with the prologue
+    const save = loadSave()
+    const canContinue = save.scene === 'Street' && LEVELS[save.level] && (save.level !== 'w1' || save.checkpoint > 0)
+    const label = canContinue ? `PRESS ENTER: CONTINUE ${LEVELS[save.level].title}` : 'PRESS ENTER'
+    const start = this.add.text(640, 430, label, { fontFamily: 'Bangers', fontSize: '44px', color: '#fff' }).setOrigin(0.5)
     this.tweens.add({ targets: start, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 })
 
+    const go = (level, checkpoint) => () => this.scene.start('Street', { level, checkpoint })
     const menu = [
       ['Prologue', () => this.scene.start('Prologue')],
-      ['Neon Strip', () => this.scene.start('Street', { checkpoint: 0 })],
-      ['Brick standoff', () => this.scene.start('Street', { checkpoint: 2 })],
-      ['Sadie boss', () => this.scene.start('Street', { checkpoint: 3 })],
+      ['W1 Neon Strip', go('w1', 0)],
+      ['W1 Brick', go('w1', 2)],
+      ['W1 Sadie', go('w1', 3)],
+      ['W2 Casino', go('w2', 0)],
+      ['W2 Penny', go('w2', 2)],
+      ['W2 Lou', go('w2', 3)],
     ]
-    this.add.text(640, 512, 'LEVEL SELECT', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '16px', color: '#b9a6e0' }).setOrigin(0.5)
+    const KEYS = ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN']
+    this.add.text(640, 498, 'LEVEL SELECT', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '16px', color: '#b9a6e0' }).setOrigin(0.5)
     menu.forEach(([label, go], i) => {
-      const x = 640 + (i - 1.5) * 230
-      const b = this.add.text(x, 548, `${i + 1}  ${label}`, {
-        fontFamily: 'Nunito', fontStyle: '800', fontSize: '20px', color: '#fff', backgroundColor: '#2a0f4acc', padding: { x: 12, y: 8 },
+      const row = i < 4 ? 0 : 1
+      const col = row === 0 ? i : i - 4
+      const x = row === 0 ? 640 + (col - 1.5) * 225 : 640 + (col - 1) * 225
+      const b = this.add.text(x, 530 + row * 48, `${i + 1}  ${label}`, {
+        fontFamily: 'Nunito', fontStyle: '800', fontSize: '19px', color: '#fff', backgroundColor: '#2a0f4acc', padding: { x: 12, y: 7 },
       }).setOrigin(0.5).setInteractive({ useHandCursor: true })
       b.on('pointerdown', () => { sfx(this, 'select'); go() })
       b.on('pointerover', () => { b.setColor('#ffd166'); sfx(this, 'hover') })
       b.on('pointerout', () => b.setColor('#fff'))
-      this.input.keyboard.on(`keydown-${['ONE', 'TWO', 'THREE', 'FOUR'][i]}`, () => { sfx(this, 'select'); go() })
+      this.input.keyboard.on(`keydown-${KEYS[i]}`, () => { sfx(this, 'select'); go() })
     })
-    this.input.keyboard.once('keydown-ENTER', () => { sfx(this, 'select'); this.scene.start('Prologue') })
+    this.input.keyboard.once('keydown-ENTER', () => {
+      sfx(this, 'select')
+      if (canContinue) this.scene.start('Street', { level: save.level, checkpoint: save.checkpoint || 0, bossPhase: save.bossPhase || 0 })
+      else this.scene.start('Prologue')
+    })
 
     this.add.text(640, 690, 'Based on A Course in Game Theory by Martin J. Osborne & Ariel Rubinstein (MIT Press, 1994). A fan-made learning game.', {
       fontFamily: 'Nunito', fontStyle: '800', fontSize: '15px', color: '#b9a6e0', align: 'center', wordWrap: { width: 1200 },

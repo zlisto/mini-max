@@ -1,37 +1,52 @@
 import Phaser from 'phaser'
-import { BOOK_NOTES } from '../data/games.js'
+import { LEVELS } from '../data/levels.js'
 import { bindMuteKey } from '../systems/audio.js'
 import { sfx } from '../systems/sfx.js'
 
 export default class End extends Phaser.Scene {
   constructor() { super('End') }
 
+  init(data) { this.L = LEVELS[data.level] || LEVELS.w1 }
+
   create() {
+    const L = this.L, E = L.end
     this.cameras.main.fadeIn(600)
     bindMuteKey(this)
-    this.add.image(640, 360, 'title_bg').setDisplaySize(1280, 720)
-    this.add.rectangle(640, 360, 1280, 720, 0x0b0614, 0.82)
+    this.add.image(640, 360, L.art.far).setDisplaySize(1280, 720)
+    this.add.rectangle(640, 360, 1280, 720, 0x0b0614, 0.84)
     this.add.image(1110, 140, 'setlist_page').setScale(1.6).setAngle(-8)
-    this.add.text(640, 70, 'NEON STRIP CLEARED', { fontFamily: 'Bangers', fontSize: '72px', color: '#ffd166', stroke: '#ff5fa2', strokeThickness: 6 }).setOrigin(0.5)
-    this.add.text(640, 128, 'Setlist page 1 of 12 recovered', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '24px', color: '#fff' }).setOrigin(0.5)
-    this.add.text(150, 180, 'WHAT YOU USED, FROM THE BOOK', { fontFamily: 'Bangers', fontSize: '30px', color: '#ff5fa2' })
-    BOOK_NOTES.forEach(([idea, ref], i) => {
-      const y = 226 + i * 40
-      this.add.text(150, y, idea, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '21px', color: '#ffffff' })
-      this.add.text(1130, y, ref, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '19px', color: '#b9a6e0' }).setOrigin(1, 0)
+    this.add.text(640, 66, E.title, { fontFamily: 'Bangers', fontSize: '68px', color: '#ffd166', stroke: '#ff5fa2', strokeThickness: 6 }).setOrigin(0.5)
+    this.add.text(640, 122, `Setlist page ${L.page} of 12 recovered`, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '24px', color: '#fff' }).setOrigin(0.5)
+    this.add.text(150, 168, 'WHAT YOU USED, FROM THE BOOK', { fontFamily: 'Bangers', fontSize: '30px', color: '#ff5fa2' })
+    E.notes.forEach(([idea, ref], i) => {
+      const y = 208 + i * 36
+      this.add.text(150, y, idea, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '20px', color: '#ffffff' })
+      this.add.text(1130, y, ref, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '18px', color: '#b9a6e0' }).setOrigin(1, 0)
     })
-    this.add.text(640, 528, '† The Strike / Guard / Grab triangle and the fight-card numbers are inventions of this game, not from the book.\nThe ideas they illustrate are the book\'s: Osborne & Rubinstein, A Course in Game Theory (MIT Press, 1994), Chapter 2.', {
-      fontFamily: 'Nunito', fontStyle: '800', fontSize: '16px', color: '#b9a6e0', align: 'center',
-    }).setOrigin(0.5)
-    this.add.text(640, 590, 'End of the prototype. Next stop: the Casino Arcade (mixed strategies, Chapter 3).', {
-      fontFamily: 'Nunito', fontStyle: '800', fontSize: '20px', color: '#ffd166',
+    this.add.text(640, 528, `† ${E.dagger}\nThe ideas they illustrate are the book's: Osborne & Rubinstein, A Course in Game Theory (MIT Press, 1994), ${E.chapter}.`, {
+      fontFamily: 'Nunito', fontStyle: '800', fontSize: '16px', color: '#b9a6e0', align: 'center', wordWrap: { width: 1150 },
     }).setOrigin(0.5)
     const btn = (x, label, go) => {
-      const b = this.add.text(x, 650, label, { fontFamily: 'Bangers', fontSize: '32px', color: '#fff', backgroundColor: '#2a0f4a', padding: { x: 18, y: 8 } })
+      const b = this.add.text(x, 640, label, { fontFamily: 'Bangers', fontSize: '32px', color: '#fff', backgroundColor: '#2a0f4a', padding: { x: 18, y: 8 } })
         .setOrigin(0.5).setInteractive({ useHandCursor: true })
-      b.on('pointerdown', () => { sfx(this, 'select'); go() }).on('pointerover', () => b.setColor('#ffd166')).on('pointerout', () => b.setColor('#fff'))
+      b.on('pointerdown', () => { sfx(this, 'select'); go() }).on('pointerover', () => { b.setColor('#ffd166'); sfx(this, 'hover') }).on('pointerout', () => b.setColor('#fff'))
+      return b
     }
-    btn(500, 'Replay Neon Strip', () => this.scene.start('Street', { checkpoint: 0 }))
-    btn(800, 'Title', () => this.scene.start('Title'))
+    if (E.next) {
+      const N = LEVELS[E.next.level]
+      this.add.text(640, 580, `Next stop: ${N.title} (${N.chapter}). Press Enter.`, {
+        fontFamily: 'Nunito', fontStyle: '800', fontSize: '20px', color: '#ffd166',
+      }).setOrigin(0.5)
+      btn(320, `Replay ${L.title}`, () => this.scene.start('Street', { level: L.id, checkpoint: 0 }))
+      btn(700, E.next.label, () => this.scene.start('Street', { level: E.next.level, checkpoint: 0 }))
+      btn(1030, 'Title', () => this.scene.start('Title'))
+      this.input.keyboard.once('keydown-ENTER', () => { sfx(this, 'select'); this.scene.start('Street', { level: E.next.level, checkpoint: 0 }) })
+    } else {
+      this.add.text(640, 580, 'End of the game so far. Next stop: the Hall of Mirrors (Chapter 4).', {
+        fontFamily: 'Nunito', fontStyle: '800', fontSize: '20px', color: '#ffd166',
+      }).setOrigin(0.5)
+      btn(470, `Replay ${L.title}`, () => this.scene.start('Street', { level: L.id, checkpoint: 0 }))
+      btn(820, 'Title', () => this.scene.start('Title'))
+    }
   }
 }

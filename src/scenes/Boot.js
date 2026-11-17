@@ -12,9 +12,10 @@ export default class Boot extends Phaser.Scene {
   create() {
     const manifest = this.cache.json.get('manifest')
     this.registry.set('manifest', manifest)
-    const jpg = new Set(['strip_far', 'strip_ground', 'prologue_bg', 'title_bg'])
+    const jpg = new Set(['strip_far', 'strip_ground', 'casino_far', 'casino_ground', 'prologue_bg', 'title_bg'])
     Object.keys(manifest).forEach((id) => this.load.image(id, `art/${id}.${jpg.has(id) ? 'jpg' : 'png'}`))
     this.load.audio('level_01', ['music/level_01.ogg', 'music/Level_01.mp3'])
+    this.load.audio('level_02', ['music/level_02.ogg', 'music/Level_02.mp3'])
     this.load.audio('title_theme', ['music/title_theme.ogg', 'music/title_theme.mp3'])
     this.load.audio('prologue_theme', ['music/prologue_theme.ogg', 'music/prologue_theme.mp3'])
     this.makePageTexture()
@@ -22,7 +23,7 @@ export default class Boot extends Phaser.Scene {
       try { await Promise.all([document.fonts.load('40px Bangers'), document.fonts.load('800 20px Nunito')]) } catch { /* offline */ }
       const q = new URLSearchParams(location.search)
       const scene = q.get('scene')
-      if (scene) this.scene.start(scene, { checkpoint: Number(q.get('cp') || 0) })
+      if (scene) this.scene.start(scene, { level: q.get('level') || 'w1', checkpoint: Number(q.get('cp') || 0) })
       else this.scene.start('Title')
     })
     this.load.start()
