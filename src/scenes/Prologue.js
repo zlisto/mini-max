@@ -3,7 +3,8 @@ import { Dialogue } from '../ui/Dialogue.js'
 import { Fighter } from '../actors/Fighter.js'
 import { PD, shuffle } from '../data/games.js'
 import { trackPresses } from '../systems/presses.js'
-import { stopMusic, bindMuteKey } from '../systems/audio.js'
+import { playMusic, bindMuteKey } from '../systems/audio.js'
+import { sfx } from '../systems/sfx.js'
 
 // Prologue: the Prisoner's Dilemma (Example 16.2, Figure 17.1, pp.16-17).
 export default class Prologue extends Phaser.Scene {
@@ -11,7 +12,7 @@ export default class Prologue extends Phaser.Scene {
 
   create() {
     this.cameras.main.fadeIn(500)
-    stopMusic(this)
+    playMusic(this, 'prologue_theme', 0.4)
     bindMuteKey(this)
     this.add.image(640, 360, 'prologue_bg').setDisplaySize(1280, 720)
     this.lisa = new Fighter(this, 'lisa', 300, 650, { artFacing: 1 })
@@ -88,6 +89,7 @@ export default class Prologue extends Phaser.Scene {
   choose(r) {
     if (!this.choosing) return
     this.choosing = false
+    sfx(this, 'select')
     this.prompt.destroy()
     this.rowHit[r].setFillStyle(0xff5fa2, 0.25)
     const juno = 'sell' // each player's dominant action (p.16): whatever the other does, Confess is better
@@ -113,6 +115,8 @@ export default class Prologue extends Phaser.Scene {
   }
 
   takeJuno() {
+    sfx(this, 'sting')
+    this.time.delayedCall(400, () => sfx(this, 'whooshBig'))
     if (this.cardC) this.tweens.add({ targets: this.cardC, alpha: 0, duration: 300 })
     this.tweens.add({ targets: [this.juno.sprite, this.juno.shadow, this.zero.sprite, this.zero.shadow], alpha: 0, x: '+=260', duration: 900, delay: 300 })
     for (let i = 0; i < 6; i++) {

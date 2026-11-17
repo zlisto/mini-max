@@ -1,15 +1,15 @@
 import Phaser from 'phaser'
+import { sfx } from '../systems/sfx.js'
 import { MOVES, MOVE_LABEL, MOVE_KEY, makeStandoff, fogCells, enemyPick, maxminRows, rowMin, shuffle } from '../data/games.js'
 
 // A standoff: one strictly competitive game per phase (Definition 21.1, p.21). Lisa picks a row; the enemy
 // best-responds to her recent play. Playing the maxminimizer row (Definition 21.2) guarantees the value.
-// phase = { hp, view: 'lisa' | 'enemy', fog: bool }
+// phase = { hp, view: 'lisa' | 'enemy', fog: bool, value, timer?: seconds }  (no timer = take your time)
 export class Standoff {
   constructor(scene, { lisa, enemy, enemyName, phases, onPhaseWin, onLose, say }) {
     Object.assign(this, { scene, lisa, enemy, enemyName, phases, onPhaseWin, onLose, say })
     this.phaseIdx = 0
     this.c = scene.add.container(0, 0).setScrollFactor(0).setDepth(4200).setVisible(false)
-    this.keys = scene.input.keyboard.addKeys('J,K,L')
     this.active = false
   }
 
@@ -22,6 +22,7 @@ export class Standoff {
     this.value = g.value
     this.hp = ph.hp
     this.view = ph.view
+    this.timeMax = ph.timer || null
     this.hidden = ph.fog ? fogCells(this.A, this.saddle[0]) : new Set()
     this.rowOrder = shuffle([0, 1, 2]) // shuffled layout on every mount
     this.colOrder = shuffle([0, 1, 2])
@@ -31,6 +32,7 @@ export class Standoff {
     this.active = true
     this.c.setVisible(true).setAlpha(0)
     this.scene.tweens.add({ targets: this.c, alpha: 1, duration: 250 })
+    sfx(this.scene, 'freeze')
     this.ask()
   }
 
@@ -84,12 +86,15 @@ export class Standoff {
   // ---- rounds -------------------------------------------------------------
   ask() {
     this.waiting = true
-    this.timeLeft = this.timeMax = 9
+    this.timeLeft = this.timeMax
+    this.lastTick = null
+    this.timerBar.setVisible(!!this.timeMax)
   }
 
   pick(r) {
     if (!this.active || !this.waiting) return
     this.waiting = false
+    sfx(this.scene, 'pick')
     const c = enemyPick(this.A, this.history)
     this.history.push(r)
     this.reveal(r, c)
@@ -123,6 +128,8 @@ export class Standoff {
       s.cameras.main.shake(120, 0.004)
       const mid = (this.lisa.x + this.enemy.x) / 2
       s.floatText(mid, this.lisa.y - 330, `${fmt(this.view === 'enemy' ? -got : got)}`, '#ffffff')
+      sfx(s, 'clash')
+      s.time.delayedCall(120, () => sfx(s, clean ? 'clean' : 'punished'))
       if (clean) {
         this.hp -= 1
         this.enemy.flash()
@@ -176,13 +183,17 @@ export class Standoff {
 
   update(dt) {
     if (!this.active || !this.waiting) return
-    this.timeLeft -= dt
-    this.timerBar.setScale(Math.max(0, this.timeLeft / this.timeMax), 1)
+    if (this.timeMax) {
+      this.timeLeft -= dt
+      this.timerBar.setScale(Math.max(0, this.timeLeft / this.timeMax), 1)
+      const sec = Math.ceil(this.timeLeft)
+      if (sec <= 3 && sec !== this.lastTick) { this.lastTick = sec; sfx(this.scene, 'tick') }
+    }
     const p = this.scene.presses
     if (p.take('KeyJ', 'KeyZ')) this.pick(0)
     else if (p.take('KeyK', 'KeyX')) this.pick(1)
     else if (p.take('KeyL', 'KeyC')) this.pick(2)
-    else if (this.timeLeft <= 0) this.timeout()
+    else if (this.timeMax && this.timeLeft <= 0) this.timeout()
   }
 
   solve() { if (this.waiting) this.pick(maxminRows(this.A)[0]) }

@@ -6,6 +6,7 @@ import { BEATS } from '../data/games.js'
 import { loadSave, writeSave } from '../systems/save.js'
 import { trackPresses } from '../systems/presses.js'
 import { playMusic, bindMuteKey, isMuted } from '../systems/audio.js'
+import { sfx } from '../systems/sfx.js'
 
 const LEVEL_W = 4200
 const LANE_TOP = 520
@@ -153,6 +154,7 @@ export default class Street extends Phaser.Scene {
 
   hurtEnemy(e, dmg, knock = 30, down = false) {
     e.hp -= dmg
+    sfx(this, dmg >= 2 ? 'hitHeavy' : 'hit')
     e.flash()
     e.tint(null)
     this.floatText(e.x, e.y - 260, `-${dmg}`, '#ffd166')
@@ -160,6 +162,7 @@ export default class Street extends Phaser.Scene {
     e.x = Phaser.Math.Clamp(e.x + knock * this.lisa.facing, 20, LEVEL_W - 20)
     if (e.hp <= 0 || down) {
       e.st = 'down'; e.t = 0; e.setPose('hurt')
+      this.time.delayedCall(260, () => sfx(this, 'thud'))
       this.tweens.add({ targets: e.sprite, angle: -80 * this.lisa.facing, duration: 250 })
     } else {
       e.st = 'hurt'; e.t = 0; e.setPose('hurt')
@@ -170,6 +173,7 @@ export default class Street extends Phaser.Scene {
     const L = this.lisa
     if (L.invuln > 0 || L.st === 'down') return
     L.hp -= dmg
+    sfx(this, down ? 'hitHeavy' : 'hurt')
     L.flash()
     this.floatText(L.x, L.y - 250, `-${dmg}`, '#ff6b7a')
     this.spark(L.x, L.y - 160, 0xff6b7a)
@@ -238,7 +242,8 @@ export default class Street extends Phaser.Scene {
     L.setPose(move)
     L.habits.push(move)
     if (L.habits.length > 8) L.habits.shift()
-    if (move === 'strike') { L.x += 14 * L.facing }
+    if (move === 'strike') { L.x += 14 * L.facing; sfx(this, 'whoosh') }
+    if (move === 'grab') sfx(this, 'whooshBig')
   }
 
   toFree() { const L = this.lisa; L.st = 'free'; L.t = 0; L.setPose('idle') }
@@ -252,6 +257,7 @@ export default class Street extends Phaser.Scene {
         // Guard beats Strike
         this.spark(e.x - 30 * L.facing, e.y - 180, 0x8fb4ff)
         this.floatText(e.x, e.y - 270, 'BLOCKED', '#8fb4ff')
+        sfx(this, 'block')
         L.st = 'recoil'; L.t = 0; L.setPose('hurt')
         L.x -= 30 * L.facing
         return
@@ -334,11 +340,13 @@ export default class Street extends Phaser.Scene {
       if (e.st === 'strike') {
         if (!e.hitDone && e.t > 0.45) {
           e.hitDone = true; e.setPose('strike'); e.tint(null)
+          sfx(this, 'whoosh')
           if (this.inReach(e, L, 130) && L.st !== 'down' && L.invuln <= 0) {
             if (L.st === 'guard' && L.facing === -e.facing) {
               // Guard beats Strike: he staggers
               this.spark(L.x + 30 * L.facing, L.y - 180, 0x8fb4ff)
               this.floatText(L.x, L.y - 270, 'BLOCK', '#8fb4ff')
+              sfx(this, 'block')
               e.st = 'hurt'; e.t = -0.2; e.setPose('hurt')
             } else this.hurtLisa(2, false, e)
           }
@@ -347,6 +355,7 @@ export default class Street extends Phaser.Scene {
       } else if (e.st === 'grab') {
         if (!e.hitDone && e.t > 0.45) {
           e.hitDone = true; e.setPose('grab'); e.tint(null)
+          sfx(this, 'whooshBig')
           if (this.inReach(e, L, 105) && L.st !== 'down' && L.invuln <= 0) {
             if (L.st === 'strike') this.hurtEnemy(e, 1, 30) // Strike beats Grab
             else { this.floatText(L.x, L.y - 280, 'GRABBED', '#ffe27a'); this.hurtLisa(3, true, e) }
@@ -384,6 +393,7 @@ export default class Street extends Phaser.Scene {
   unlock() {
     this.locked = null
     this.goArrow.setVisible(true)
+    sfx(this, 'go')
     this.time.delayedCall(2500, () => this.goArrow.setVisible(false))
   }
 
@@ -543,6 +553,8 @@ export default class Street extends Phaser.Scene {
     s.setPose('hurt')
     this.tweens.add({ targets: s.sprite, angle: 75, duration: 500 })
     const page = this.add.image(s.x, s.y - 200, 'setlist_page').setDepth(4500)
+    sfx(this, 'ko')
+    this.time.delayedCall(900, () => sfx(this, 'page'))
     this.tweens.add({ targets: page, x: this.lisa.x + 40, y: this.lisa.y - 300, angle: 720, duration: 1200, ease: 'Sine.inOut' })
     this.time.delayedCall(900, () => this.talk([
       { who: 'sadie', text: 'Zero said... every fight has a loser.' },
@@ -565,6 +577,7 @@ export default class Street extends Phaser.Scene {
     this.caption.hide()
     this.lisa.setPose('hurt')
     this.tweens.add({ targets: this.lisa.sprite, angle: -80, duration: 400 })
+    sfx(this, 'ko')
     const t = this.add.text(640, 300, 'KNOCKED OUT', { fontFamily: 'Bangers', fontSize: '90px', color: '#ff6b7a', stroke: '#000', strokeThickness: 8 })
       .setOrigin(0.5).setScrollFactor(0).setDepth(6000)
     this.add.text(640, 380, 'Back to the last checkpoint...', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '24px', color: '#fff' })

@@ -1,11 +1,12 @@
 import Phaser from 'phaser'
-import { stopMusic, bindMuteKey } from '../systems/audio.js'
+import { playMusic, bindMuteKey } from '../systems/audio.js'
+import { sfx } from '../systems/sfx.js'
 
 export default class Title extends Phaser.Scene {
   constructor() { super('Title') }
 
   create() {
-    stopMusic(this)
+    playMusic(this, 'title_theme', 0.5)
     bindMuteKey(this)
     this.add.image(640, 360, 'title_bg').setDisplaySize(1280, 720)
     this.add.rectangle(640, 360, 1280, 720, 0x0b0614, 0.55)
@@ -32,12 +33,12 @@ export default class Title extends Phaser.Scene {
       const b = this.add.text(x, 548, `${i + 1}  ${label}`, {
         fontFamily: 'Nunito', fontStyle: '800', fontSize: '20px', color: '#fff', backgroundColor: '#2a0f4acc', padding: { x: 12, y: 8 },
       }).setOrigin(0.5).setInteractive({ useHandCursor: true })
-      b.on('pointerdown', go)
-      b.on('pointerover', () => b.setColor('#ffd166'))
+      b.on('pointerdown', () => { sfx(this, 'select'); go() })
+      b.on('pointerover', () => { b.setColor('#ffd166'); sfx(this, 'hover') })
       b.on('pointerout', () => b.setColor('#fff'))
-      this.input.keyboard.on(`keydown-${['ONE', 'TWO', 'THREE', 'FOUR'][i]}`, go)
+      this.input.keyboard.on(`keydown-${['ONE', 'TWO', 'THREE', 'FOUR'][i]}`, () => { sfx(this, 'select'); go() })
     })
-    this.input.keyboard.once('keydown-ENTER', () => this.scene.start('Prologue'))
+    this.input.keyboard.once('keydown-ENTER', () => { sfx(this, 'select'); this.scene.start('Prologue') })
 
     this.add.text(640, 690, 'Based on A Course in Game Theory by Martin J. Osborne & Ariel Rubinstein (MIT Press, 1994). A fan-made learning game.', {
       fontFamily: 'Nunito', fontStyle: '800', fontSize: '15px', color: '#b9a6e0', align: 'center', wordWrap: { width: 1200 },

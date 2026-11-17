@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { BOOK_NOTES } from '../data/games.js'
 import { bindMuteKey } from '../systems/audio.js'
+import { sfx } from '../systems/sfx.js'
 
 export default class End extends Phaser.Scene {
   constructor() { super('End') }
@@ -28,7 +29,7 @@ export default class End extends Phaser.Scene {
     const btn = (x, label, go) => {
       const b = this.add.text(x, 650, label, { fontFamily: 'Bangers', fontSize: '32px', color: '#fff', backgroundColor: '#2a0f4a', padding: { x: 18, y: 8 } })
         .setOrigin(0.5).setInteractive({ useHandCursor: true })
-      b.on('pointerdown', go).on('pointerover', () => b.setColor('#ffd166')).on('pointerout', () => b.setColor('#fff'))
+      b.on('pointerdown', () => { sfx(this, 'select'); go() }).on('pointerover', () => b.setColor('#ffd166')).on('pointerout', () => b.setColor('#fff'))
     }
     btn(500, 'Replay Neon Strip', () => this.scene.start('Street', { checkpoint: 0 }))
     btn(800, 'Title', () => this.scene.start('Title'))

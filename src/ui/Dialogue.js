@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { sfx, VOICE } from '../systems/sfx.js'
 
 const WHO = {
   lisa: { name: 'LISA', key: 'lisa_portrait', side: 'left', color: '#ff5fa2' },
@@ -29,7 +30,6 @@ export class Dialogue {
     this.hint = scene.add.text(1240, y + 108, '▼', { fontFamily: 'Nunito', fontSize: '20px', color: '#ff5fa2' }).setOrigin(1, 0)
     this.c.add([this.box, this.portrait, this.name, this.text, this.hint])
     scene.tweens.add({ targets: this.hint, alpha: 0.2, duration: 450, yoyo: true, repeat: -1 })
-    this.keys = scene.input.keyboard.addKeys('SPACE,ENTER,J,Z')
     this._onPointer = () => this.active && this.advance()
     scene.input.on('pointerdown', this._onPointer)
   }
@@ -48,6 +48,7 @@ export class Dialogue {
     if (!line) { this.close(); return }
     if (line.do) line.do()
     const who = WHO[line.who]
+    this.voice = VOICE[line.who] || 0.9
     const hasP = who && this.scene.textures.exists(who.key)
     this.portrait.setVisible(!!hasP)
     let tx = 44
@@ -70,6 +71,7 @@ export class Dialogue {
     if (this.cooldown > 0) return
     this.cooldown = 0.12
     if (this.shown < this.full.length) { this.shown = this.full.length; this.text.setText(this.full); return }
+    sfx(this.scene, 'advance')
     this.next()
   }
 
@@ -85,8 +87,12 @@ export class Dialogue {
     if (!this.active) return
     this.cooldown -= dt
     if (this.shown < this.full.length) {
+      const before = Math.floor(this.shown)
       this.shown = Math.min(this.full.length, this.shown + dt * 70)
-      this.text.setText(this.full.slice(0, Math.floor(this.shown)))
+      const now = Math.floor(this.shown)
+      this.text.setText(this.full.slice(0, now))
+      // a blip every third letter, pitched to the speaker
+      if (Math.floor(now / 3) > Math.floor(before / 3) && /\S/.test(this.full[now - 1] || '')) sfx(this.scene, 'blip', this.voice)
     }
     const p = this.scene.presses
     if (p && p.take('Space', 'Enter', 'KeyJ', 'KeyZ')) this.advance()

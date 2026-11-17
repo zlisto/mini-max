@@ -15,6 +15,8 @@ export default class Boot extends Phaser.Scene {
     const jpg = new Set(['strip_far', 'strip_ground', 'prologue_bg', 'title_bg'])
     Object.keys(manifest).forEach((id) => this.load.image(id, `art/${id}.${jpg.has(id) ? 'jpg' : 'png'}`))
     this.load.audio('level_01', ['music/level_01.ogg', 'music/Level_01.mp3'])
+    this.load.audio('title_theme', ['music/title_theme.ogg', 'music/title_theme.mp3'])
+    this.load.audio('prologue_theme', ['music/prologue_theme.ogg', 'music/prologue_theme.mp3'])
     this.makePageTexture()
     this.load.once('complete', async () => {
       try { await Promise.all([document.fonts.load('40px Bangers'), document.fonts.load('800 20px Nunito')]) } catch { /* offline */ }
