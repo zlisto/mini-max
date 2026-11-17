@@ -12,6 +12,7 @@ const LANE_TOP = 520
 const LANE_BOT = 660
 const DEPTH_TOL = 30
 const TINT = { strike: 0xff7a7a, guard: 0x8fb4ff, grab: 0xffe27a }
+const WALK_CYCLE = ['walk', 'walkpass', 'walk', 'walkb']
 const counterOf = (m) => Object.keys(BEATS).find((k) => BEATS[k] === m)
 
 // Checkpoints are indices into TRIGGERS.
@@ -204,9 +205,15 @@ export default class Street extends Phaser.Scene {
       const maxX = this.locked != null ? this.locked + 1230 : LEVEL_W - 60
       L.x = Phaser.Math.Clamp(L.x, minX, maxX)
       const moving = vx || vy
-      if (moving && L.pose !== 'walk') L.setPose('walk')
-      if (!moving && L.pose !== 'idle') L.setPose('idle')
-      if (moving) L.walkBob = (L.walkBob || 0) + dt * 14
+      if (moving) {
+        // 4-frame walk cycle: stride, left knee up, stride, right knee up (~9 frames per second)
+        L.walkT = (L.walkT || 0) + dt
+        const frame = WALK_CYCLE[Math.floor(L.walkT * 9) % WALK_CYCLE.length]
+        if (L.pose !== frame) L.setPose(frame)
+      } else {
+        L.walkT = 0
+        if (L.pose !== 'idle') L.setPose('idle')
+      }
       if (pressStrike) {
         L.combo = this.elapsed - L.lastStrikeEnd < 0.35 ? (L.combo % 3) + 1 : 1
         this.act('strike')
@@ -584,7 +591,7 @@ export default class Street extends Phaser.Scene {
     // sync visuals
     const L = this.lisa
     L.sync(dt)
-    if (L.pose === 'walk') L.sprite.y += Math.abs(Math.sin(L.walkBob || 0)) * -6
+    if (L.pose === 'walkpass' || L.pose === 'walkb') L.sprite.y -= 4 // body rides higher as the leg passes
     if (L.invuln > 0) L.sprite.setAlpha(Math.sin(this.elapsed * 40) > 0 ? 1 : 0.4); else L.sprite.setAlpha(1)
     this.enemies.forEach((e) => e.st !== 'dead' && e.sync(dt))
     if (this.boss) this.boss.sync(dt)
