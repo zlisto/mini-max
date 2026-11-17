@@ -3,7 +3,7 @@ import { Fighter } from '../actors/Fighter.js'
 import { Dialogue } from '../ui/Dialogue.js'
 import { Standoff } from '../ui/Standoff.js'
 import { MixStandoff } from '../ui/MixStandoff.js'
-import { BEATS } from '../data/games.js'
+import { BEATS, MOVES } from '../data/games.js'
 import { LEVELS } from '../data/levels.js'
 import { loadSave, writeSave } from '../systems/save.js'
 import { trackPresses } from '../systems/presses.js'
@@ -13,9 +13,19 @@ import { sfx } from '../systems/sfx.js'
 const LANE_TOP = 520
 const LANE_BOT = 660
 const DEPTH_TOL = 30
-const TINT = { strike: 0xff7a7a, guard: 0x8fb4ff, grab: 0xffe27a }
+const TINT = { punch: 0xff7a7a, kick: 0x8fb4ff, throw: 0xffe27a }
 const WALK_CYCLE = ['walk', 'walkpass', 'walk', 'walkb']
-const MOVE_COLOR = { strike: 0xff5fa2, guard: 0x5ce1d6, grab: 0xffd166 }
+const MOVE_COLOR = { punch: 0xff7a7a, kick: 0x8fb4ff, throw: 0xffe27a }
+const TINT_CSS = { punch: '#ff7a7a', kick: '#8fb4ff', throw: '#ffe27a' }
+const REACH = { punch: 135, kick: 180, throw: 135 }
+const E_REACH = { punch: 130, kick: 165, throw: 105 }
+const E_DMG = { punch: 1, kick: 2, throw: 2 }
+// Power-ups (game fiction, named for the book's ideas)
+const POWER = {
+  payoff: { key: 'fx_payoff', name: 'PAYOFF +6', color: '#ff5fa2', tip: 'Payoff: a number for how much a player likes an outcome. This one is +6 health. (Orbs are game inventions †.)' },
+  nash: { key: 'fx_nash', name: 'EQUILIBRIUM SHIELD', color: '#5ce1d6', tip: 'At a Nash equilibrium no player gains by changing their own move alone. Like that, for 6 seconds no hit gains them anything. †' },
+  best: { key: 'fx_best', name: 'BEST RESPONSE', color: '#ffd166', tip: 'A best response is a move that does best against what the other side is playing. For 8 seconds, every move you make is one. †' },
+}
 const counterOf = (m) => Object.keys(BEATS).find((k) => BEATS[k] === m)
 
 // One street level, driven by LEVELS[id]: brawl waves, an elite standoff, a boss with three phases.
@@ -42,7 +52,9 @@ export default class Street extends Phaser.Scene {
     this.buildWorld()
     this.enemies = []
     this.lisa = new Fighter(this, 'lisa', 200, 590, { hp: 20 })
-    Object.assign(this.lisa, { st: 'free', t: 0, habits: [], combo: 0, lastStrikeEnd: -9, invuln: 0 })
+    Object.assign(this.lisa, { st: 'free', t: 0, habits: [], combo: 0, lastStrikeEnd: -9, invuln: 0, shield: 0, best: 0 })
+    this.pickups = []
+    this.aura = this.add.ellipse(0, 0, 150, 40).setStrokeStyle(5, 0x5ce1d6).setVisible(false)
     this.tempo = this.add.image(120, 300, 'tempo_sprite').setScale(0.3).setDepth(2900)
     this.dlg = new Dialogue(this, { top: true })
     this.buildHud()
@@ -60,6 +72,7 @@ export default class Street extends Phaser.Scene {
     this.so = null
     this.boss = null
     this.readerTalked = false
+    this.tipUp = false
 
     const cp = this.L.triggers[this.checkpoint]
     this.L.triggers.slice(0, this.checkpoint).forEach((t) => this.done.add(t.id))
@@ -105,23 +118,24 @@ export default class Street extends Phaser.Scene {
     this.add.text(56, 686, 'LISA', { fontFamily: 'Bangers', fontSize: '24px', color: '#ff5fa2' }).setScrollFactor(0).setDepth(d)
     this.add.rectangle(112, 698, 260, 16, 0x3a1a5a).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d)
     this.hpBar = this.add.rectangle(112, 698, 260, 16, 0xff5fa2).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d)
-    const legendX = this.L.habitMeter ? 735 : 640
-    this.legend = this.add.text(legendX, 698, 'Strike ▶ Grab   ·   Grab ▶ Guard   ·   Guard ▶ Strike', {
-      fontFamily: 'Nunito', fontStyle: '800', fontSize: '16px', color: '#e8dcff',
+    const legendX = this.L.habitMeter ? 775 : 640
+    this.legend = this.add.text(legendX, 698, 'Kick beats Punch  ·  Punch beats Throw  ·  Throw beats Kick †', {
+      fontFamily: 'Nunito', fontStyle: '800', fontSize: '15px', color: '#e8dcff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(d)
     if (this.L.habitMeter) {
       // the MIX meter: Lisa's last eight moves, as the dealers see them
       this.mixParts = [this.add.text(388, 698, 'MIX', { fontFamily: 'Bangers', fontSize: '22px', color: '#ffd166' }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d)]
-      this.habitBars = ['strike', 'guard', 'grab'].map((m, i) => {
+      this.habitBars = MOVES.map((m, i) => {
         const x = 428 + i * 32
         const back = this.add.rectangle(x, 714, 28, 34, 0x2a0f4a).setOrigin(0, 1).setScrollFactor(0).setDepth(d)
         const bar = this.add.rectangle(x, 714, 28, 0, MOVE_COLOR[m]).setOrigin(0, 1).setScrollFactor(0).setDepth(d)
-        const lab = this.add.text(x + 14, 697, m === 'strike' ? 'S' : m === 'guard' ? 'G' : 'Gr', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '13px', color: '#fff', stroke: '#000', strokeThickness: 3 })
+        const lab = this.add.text(x + 14, 697, m === 'punch' ? 'P' : m === 'kick' ? 'K' : 'T', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '13px', color: '#fff', stroke: '#000', strokeThickness: 3 })
           .setOrigin(0.5).setScrollFactor(0).setDepth(d + 1)
         this.mixParts.push(back, bar, lab)
         return { m, bar }
       })
     }
+    this.powerLabel = this.add.text(112, 660, '', { fontFamily: 'Bangers', fontSize: '22px', color: '#ffd166', stroke: '#000', strokeThickness: 4 }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d)
     this.muteLabel = this.add.text(1252, 652, '', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '15px', color: '#b9a6e0' })
       .setOrigin(1, 0).setScrollFactor(0).setDepth(d)
     this.foeLabel = this.add.text(1252, 686, '', { fontFamily: 'Bangers', fontSize: '24px', color: '#ff9a5c' }).setOrigin(1, 0).setScrollFactor(0).setDepth(d)
@@ -162,7 +176,7 @@ export default class Street extends Phaser.Scene {
   // ---------------------------------------------------------------- enemies
   spawn(kind, x, y) {
     const prefix = kind === 'dealer' ? 'dealer' : 'grunt'
-    const e = new Fighter(this, prefix, x, y, { hp: kind === 'grunt' ? 4 : 5 })
+    const e = new Fighter(this, prefix, x, y, { hp: kind === 'grunt' ? 5 : 6 })
     Object.assign(e, { kind, st: 'free', t: 0, wait: 0.6 + Math.random() * 0.8, laneOff: Phaser.Math.Between(kind === 'dealer' ? -26 : -10, kind === 'dealer' ? 26 : 10) })
     if (kind === 'reader') {
       e.shadow.setFillStyle(0xa25cff, 0.7)
@@ -183,6 +197,7 @@ export default class Street extends Phaser.Scene {
 
   hurtEnemy(e, dmg, knock = 30, down = false) {
     e.hp -= dmg
+    if (e.moveTag) e.moveTag.setText('')
     sfx(this, dmg >= 2 ? 'hitHeavy' : 'hit')
     e.flash()
     e.tint(null)
@@ -200,7 +215,13 @@ export default class Street extends Phaser.Scene {
 
   hurtLisa(dmg, down = false, from = null) {
     const L = this.lisa
-    if (L.invuln > 0 || L.st === 'down') return
+    if (L.invuln > 0 || L.st === 'down' || L.st === 'flip') return
+    if (L.shield > 0) {
+      this.floatText(L.x, L.y - 270, 'NO GAIN', '#5ce1d6')
+      this.spark(L.x, L.y - 160, 0x5ce1d6)
+      sfx(this, 'block')
+      return
+    }
     L.hp -= dmg
     sfx(this, down ? 'hitHeavy' : 'hurt')
     L.flash()
@@ -220,10 +241,10 @@ export default class Street extends Phaser.Scene {
     const L = this.lisa, k = this.keys
     L.t += dt
     L.invuln = Math.max(0, L.invuln - dt)
+    L.shield = Math.max(0, L.shield - dt)
+    L.best = Math.max(0, L.best - dt)
     const p = this.presses
-    const pressStrike = p.take('KeyJ', 'KeyZ'), pressGrab = p.take('KeyL', 'KeyC')
-    const tapGuard = p.take('KeyK', 'KeyX')
-    const holdGuard = k.K.isDown || k.X.isDown || tapGuard
+    const pPunch = p.take('KeyJ', 'KeyZ'), pKick = p.take('KeyK', 'KeyX'), pThrow = p.take('KeyL', 'KeyC')
     if (L.st === 'free') {
       let vx = 0, vy = 0
       if (k.LEFT.isDown || k.A.isDown) vx -= 1
@@ -246,19 +267,23 @@ export default class Street extends Phaser.Scene {
         L.walkT = 0
         if (L.pose !== 'idle') L.setPose('idle')
       }
-      if (pressStrike) {
+      this.checkPickups()
+      if (pPunch) {
         L.combo = this.elapsed - L.lastStrikeEnd < 0.35 ? (L.combo % 3) + 1 : 1
-        this.act('strike')
-      } else if (pressGrab) this.act('grab')
-      else if (holdGuard) this.act('guard')
-    } else if (L.st === 'strike') {
-      if (!L.hitDone && L.t > 0.08) { L.hitDone = true; this.lisaStrike() }
-      if (L.t > 0.28) { L.lastStrikeEnd = this.elapsed; this.toFree() }
-    } else if (L.st === 'grab') {
-      if (!L.hitDone && L.t > 0.14) { L.hitDone = true; this.lisaGrab() }
-      if (L.t > 0.45) this.toFree()
-    } else if (L.st === 'guard') {
-      if (!holdGuard && L.t > 0.15) this.toFree()
+        this.act('punch')
+      } else if (pKick) this.act('kick')
+      else if (pThrow) this.act('throw')
+    } else if (L.st === 'punch') {
+      if (!L.hitDone && L.t > 0.08) { L.hitDone = true; this.lisaHit('punch') }
+      if (L.st === 'punch' && L.t > 0.26) { L.lastStrikeEnd = this.elapsed; this.toFree() }
+    } else if (L.st === 'kick') {
+      if (!L.hitDone && L.t > 0.14) { L.hitDone = true; this.lisaHit('kick') }
+      if (L.st === 'kick' && L.t > 0.4) this.toFree()
+    } else if (L.st === 'throw') {
+      if (!L.hitDone && L.t > 0.1) { L.hitDone = true; this.lisaThrow() }
+      if (L.st === 'throw' && L.t > 0.42) this.toFree()
+    } else if (L.st === 'flip') {
+      if (L.t > 0.75) { L.lift = 0; this.toFree() }
     } else if (L.st === 'recoil' && L.t > 0.3) this.toFree()
     else if (L.st === 'hurt' && L.t > 0.35) this.toFree()
     else if (L.st === 'down' && L.t > 1.0) { L.invuln = 0.8; this.toFree() }
@@ -270,49 +295,166 @@ export default class Street extends Phaser.Scene {
     L.setPose(move)
     L.habits.push(move)
     if (L.habits.length > 8) L.habits.shift()
-    if (move === 'strike') { L.x += 14 * L.facing; sfx(this, 'whoosh') }
-    if (move === 'grab') sfx(this, 'whooshBig')
+    if (move === 'punch') { L.x += 14 * L.facing; sfx(this, 'whoosh') }
+    if (move === 'kick') { L.x += 8 * L.facing; sfx(this, 'whooshBig') }
+    if (move === 'throw') { L.x += 18 * L.facing; L.whiff = false; sfx(this, 'whoosh') }
   }
 
-  toFree() { const L = this.lisa; L.st = 'free'; L.t = 0; L.setPose('idle') }
+  toFree() { const L = this.lisa; L.st = 'free'; L.t = 0; L.lift = 0; L.setPose('idle') }
 
-  lisaStrike() {
+  // How Lisa's move meets an enemy's: 'win' (counter), 'lose' (his move beats hers), 'clash' (same), or 'open'.
+  exchange(move, e) {
+    if (!MOVES.includes(e.st) || e.hitDone) return 'open'
+    if (this.lisa.best > 0) return 'win' // best response power-up
+    if (BEATS[move] === e.st) return 'win'
+    if (BEATS[e.st] === move) return 'lose'
+    return 'clash'
+  }
+
+  // A free enemy may answer her attack on the spot with his own pick (readers and dealers by reading her habits).
+  answer(e) {
+    if (e.st !== 'free' || this.lisa.best > 0) return
+    const p = e.kind === 'grunt' ? 0.25 : 0.55
+    if (Math.random() >= p) return
+    const mv = this.pickMove(e)
+    e.st = mv; e.t = 0.5; e.hitDone = false
+  }
+
+  // his move beats hers: his attack lands now
+  beaten(e) {
+    const mine = this.lisa.st
+    e.hitDone = true; e.setPose(e.st); e.tint(null)
+    if (this.lisa.invuln > 0 || this.lisa.shield > 0) return this.hurtLisa(E_DMG[e.st], false, e)
+    this.floatText(this.lisa.x, this.lisa.y - 285, `${e.st.toUpperCase()} BEATS ${mine.toUpperCase()}`, '#ff7a7a')
+    this.hurtLisa(E_DMG[e.st], e.st === 'throw', e)
+  }
+
+  clash(e) {
+    const L = this.lisa
+    if (e.moveTag) e.moveTag.setText('')
+    this.spark((L.x + e.x) / 2, L.y - 170, 0xffffff)
+    this.floatText(e.x, e.y - 280, 'CLASH', '#ffffff')
+    sfx(this, 'clash')
+    e.st = 'hurt'; e.t = 0; e.setPose('hurt'); e.tint(null)
+    e.x += 40 * L.facing
+    L.x -= 30 * L.facing
+  }
+
+  lisaHit(move) {
     const L = this.lisa
     let hit = false
     for (const e of this.alive()) {
-      if (e.st === 'down' || !this.inReach(L, e, 135)) continue
-      if (e.st === 'guard' && e.facing === -L.facing) {
-        // Guard beats Strike
-        this.spark(e.x - 30 * L.facing, e.y - 180, 0x8fb4ff)
-        this.floatText(e.x, e.y - 270, 'BLOCKED', '#8fb4ff')
-        sfx(this, 'block')
-        L.st = 'recoil'; L.t = 0; L.setPose('hurt')
-        if (e.kind === 'dealer') { e.st = 'strike'; e.t = 0.25; e.hitDone = false; e.tint(TINT.strike) } // parry, then riposte (no push-back)
-        else L.x -= 30 * L.facing
-        return
+      if (e.st === 'down' || e.st === 'held' || !this.inReach(L, e, REACH[move])) continue
+      this.answer(e)
+      const ex = this.exchange(move, e)
+      if (ex === 'lose') { this.beaten(e); return }
+      if (ex === 'clash') { this.clash(e); continue }
+      if (ex === 'win') {
+        e.chain = 0
+        this.floatText(e.x, e.y - 300, 'COUNTER!', '#7dffb0')
+        this.hurtEnemy(e, move === 'kick' ? 3 : 2, 90, true)
+      } else {
+        // poise: the third hit in a row doesn't stagger him; he reads her move and winds up the one that beats it
+        e.chain = this.elapsed - (e.lastHit ?? -9) < 0.9 ? (e.chain || 0) + 1 : 1
+        e.lastHit = this.elapsed
+        if (e.chain >= 4) {
+          e.chain = 0
+          e.hp -= 1
+          e.flash()
+          sfx(this, 'hit')
+          this.floatText(e.x, e.y - 270, '-1', '#ffd166')
+          if (e.hp <= 0) { this.hurtEnemy(e, 0, 30, true) } else {
+            const mv = counterOf(move)
+            e.st = mv; e.t = 0.15; e.hitDone = false; e.setPose('idle'); e.tint(TINT[mv])
+            this.floatText(e.x, e.y - 310, 'READ YOU!', '#c79bff')
+          }
+        } else {
+          const strong = move === 'kick' || L.combo === 3
+          this.hurtEnemy(e, strong ? 2 : 1, strong ? 80 : 25, move === 'punch' && L.combo === 3)
+        }
       }
-      const strong = L.combo === 3
-      this.hurtEnemy(e, strong ? 2 : 1, strong ? 90 : 25, strong)
       hit = true
     }
     if (hit) this.cam.shake(60, 0.002)
   }
 
-  lisaGrab() {
+  // The flip throw: grab, kick up into a handspring, and send him over her head to crash down behind her.
+  lisaThrow() {
     const L = this.lisa
-    const e = this.alive().filter((f) => f.st !== 'down' && this.inReach(L, f, 100)).sort((a, b) => Math.abs(a.x - L.x) - Math.abs(b.x - L.x))[0]
-    if (!e) return
-    if (e.st === 'strike') {
-      // Strike beats Grab: she walked into his punch
-      this.floatText(L.x, L.y - 280, 'COUNTERED', '#ff7a7a')
-      this.hurtLisa(2, false, e)
-      return
-    }
-    this.floatText(e.x, e.y - 280, 'THROW!', '#ffe27a')
-    this.hurtEnemy(e, 2, 0, true)
+    const e = this.alive().filter((f) => f.st !== 'down' && f.st !== 'held' && this.inReach(L, f, REACH.throw)).sort((a, b) => Math.abs(a.x - L.x) - Math.abs(b.x - L.x))[0]
+    if (!e) { L.whiff = true; return }
+    this.answer(e)
+    const ex = this.exchange('throw', e)
+    if (ex === 'lose') { this.beaten(e); return }
+    if (ex === 'clash') { L.whiff = true; this.clash(e); return }
+    const counter = ex === 'win'
+    L.st = 'flip'; L.t = 0; L.invuln = Math.max(L.invuln, 0.75)
+    e.st = 'held'; e.t = 0; e.tint(null); e.setPose('hurt'); e.hitDone = true
+    if (e.moveTag) e.moveTag.setText('')
+    e.x = L.x + 70 * L.facing; e.y = L.y + 2
+    this.floatText(e.x, e.y - 300, counter ? 'COUNTER THROW!' : 'THROW!', '#ffe27a')
     const lo = this.locked != null ? this.locked + 60 : 30, hi = this.locked != null ? this.locked + 1220 : this.W - 30
-    this.tweens.add({ targets: e, x: Phaser.Math.Clamp(e.x + 170 * L.facing, lo, hi), duration: 300, ease: 'Quad.out' })
+    const x0 = e.x, x1 = Phaser.Math.Clamp(L.x - 190 * L.facing, lo, hi)
+    this.time.delayedCall(120, () => {
+      L.setPose('flip')
+      sfx(this, 'whooshBig')
+      this.tweens.add({ targets: L, lift: { from: 0, to: 40 }, duration: 250, yoyo: true })
+      this.tweens.addCounter({
+        from: 0, to: 1, duration: 520, ease: 'Sine.inOut',
+        onUpdate: (tw) => { const v = tw.getValue(); e.x = x0 + (x1 - x0) * v; e.lift = Math.sin(v * Math.PI) * 300; e.sprite.setAngle(-360 * v * L.facing) },
+        onComplete: () => {
+          e.lift = 0; e.sprite.setAngle(0)
+          this.cam.shake(160, 0.008)
+          this.spark(e.x, e.y - 40, 0xffe27a)
+          const f = L.facing; L.facing = -f // knock him away from her
+          this.hurtEnemy(e, counter ? 4 : 3, 30, true)
+          L.facing = f
+        },
+      })
+    })
   }
+
+  // ---------------------------------------------------------------- power-ups
+  dropPickup() {
+    if (this.locked == null) return
+    const L = this.lisa
+    const low = L.hp <= L.maxHp * 0.5
+    const r = Math.random()
+    const type = low || r < 0.45 ? 'payoff' : r < 0.72 ? 'nash' : 'best'
+    let x = this.locked + Phaser.Math.Between(300, 980)
+    if (Math.abs(x - L.x) < 200) x = Phaser.Math.Clamp(L.x + (x < L.x ? -260 : 260), this.locked + 200, this.locked + 1080)
+    const y = Phaser.Math.Between(LANE_TOP + 20, LANE_BOT - 10)
+    const glow = this.add.ellipse(x, y, 90, 22, 0xffffff, 0.35).setDepth(3000.5)
+    const img = this.add.image(x, y - 50, POWER[type].key).setDisplaySize(72, 72).setDepth(3001)
+    this.tweens.add({ targets: img, y: y - 64, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' })
+    this.tweens.add({ targets: glow, alpha: 0.12, duration: 600, yoyo: true, repeat: -1 })
+    this.pickups.push({ type, x, y, img, glow })
+  }
+
+  checkPickups() {
+    const L = this.lisa
+    for (const pk of this.pickups.slice()) {
+      if (Math.abs(pk.x - L.x) > 60 || Math.abs(pk.y - L.y) > 34) continue
+      if (pk.type === 'payoff' && L.hp >= L.maxHp) continue // keep it for later
+      this.pickups.splice(this.pickups.indexOf(pk), 1)
+      pk.img.destroy(); pk.glow.destroy()
+      const P = POWER[pk.type]
+      if (pk.type === 'payoff') L.hp = Math.min(L.maxHp, L.hp + 6)
+      if (pk.type === 'nash') L.shield = 6
+      if (pk.type === 'best') L.best = 8
+      sfx(this, 'pick')
+      this.floatText(L.x, L.y - 300, P.name, P.color, 4200)
+      const seen = `power:${pk.type}`
+      if (!this.registry.get(seen)) {
+        this.registry.set(seen, true)
+        this.caption.show(P.tip)
+        this.tipUp = true
+        this.time.delayedCall(4500, () => { if (this.tipUp) { this.tipUp = false; this.caption.hide() } })
+      }
+    }
+  }
+
+  clearPickups() { (this.pickups || []).forEach((pk) => { pk.img.destroy(); pk.glow.destroy() }); this.pickups = [] }
 
   // ---------------------------------------------------------------- enemy ai
   // Readers counter Lisa's favourite move. Dealers best-respond to the frequencies of her last 8 moves, the
@@ -320,52 +462,53 @@ export default class Street extends Phaser.Scene {
   pickMove(e) {
     if (e.kind === 'dealer') {
       const h = this.lisa.habits.slice(-8)
-      if (h.length >= 3 && Math.random() < 0.85) {
-        const f = { strike: 0, guard: 0, grab: 0 }
+      if (h.length >= 3 && Math.random() < 0.8) {
+        const f = { punch: 0, kick: 0, throw: 0 }
         h.forEach((m) => f[m]++)
         const score = (mine) => Object.keys(f).reduce((s, hers) => s + f[hers] * (BEATS[mine] === hers ? 1 : BEATS[hers] === mine ? -1 : 0), 0)
-        const vals = ['strike', 'guard', 'grab'].map((m) => [m, score(m)])
+        const vals = MOVES.map((m) => [m, score(m)])
         const top = Math.max(...vals.map((v) => v[1]))
         if (top > 1) return Phaser.Utils.Array.GetRandom(vals.filter((v) => v[1] === top))[0] // a near-even 3/3/2 mix gives no read
       }
-      return Phaser.Utils.Array.GetRandom(['strike', 'strike', 'grab', 'guard'])
+      return Phaser.Utils.Array.GetRandom(['punch', 'punch', 'kick', 'throw'])
     }
     if (e.kind === 'reader') {
       const h = this.lisa.habits.slice(-6)
-      const sharp = 0.8
-      if (h.length >= 2 && Math.random() < sharp) {
-        const counts = { strike: 0, guard: 0, grab: 0 }
+      if (h.length >= 2 && Math.random() < 0.75) {
+        const counts = { punch: 0, kick: 0, throw: 0 }
         h.forEach((m) => counts[m]++)
         const top = Math.max(...Object.values(counts))
         const favs = Object.keys(counts).filter((m) => counts[m] === top)
         if (favs.length === 1) return counterOf(favs[0])
       }
-      return Phaser.Utils.Array.GetRandom(['strike', 'guard', 'grab'])
+      return Phaser.Utils.Array.GetRandom(MOVES)
     }
     const r = Math.random()
-    return r < 0.55 ? 'strike' : r < 0.78 ? 'guard' : 'grab'
+    return r < 0.5 ? 'punch' : r < 0.8 ? 'kick' : 'throw'
   }
 
   updateEnemies(dt) {
     const L = this.lisa
     const alive = this.alive()
-    const attackers = alive.filter((e) => e.st === 'strike' || e.st === 'grab').length
+    const attackers = alive.filter((e) => MOVES.includes(e.st)).length
     const byDist = alive.filter((e) => e.st !== 'down').sort((a, b) => Math.abs(a.x - L.x) - Math.abs(b.x - L.x))
     for (const e of alive) {
       e.t += dt
-      if (e.tag) e.tag.setPosition(e.x, e.y - 265).setDepth(e.y + 1)
+      if (e.tag) e.tag.setPosition(e.x, e.y - 265 - e.lift).setDepth(e.y + 1)
+      if (e.st === 'held') continue
       if (e.st === 'down') {
         if (e.hp <= 0 && e.t > 0.9) {
           e.st = 'dead'
+          if (e.moveTag) e.moveTag.destroy()
           this.tweens.add({ targets: [e.sprite, e.shadow, e.tag].filter(Boolean), alpha: 0, duration: 400, onComplete: () => { e.destroy(); e.tag && e.tag.destroy() } })
-        } else if (e.hp > 0 && e.t > 1.0) { e.st = 'free'; e.t = 0; e.sprite.setAngle(0); e.setPose('idle'); e.wait = 0.5 }
+        } else if (e.hp > 0 && e.t > 1.0) { e.st = 'free'; e.t = 0; e.sprite.setAngle(0); e.setPose('idle'); e.wait = 0.6 }
         continue
       }
-      if (e.st === 'hurt') { if (e.t > 0.4) { e.st = 'free'; e.t = 0; e.setPose('idle'); e.wait = 0.4 + Math.random() * 0.5 } continue }
+      if (e.st === 'hurt') { if (e.t > 0.4) { e.st = 'free'; e.t = 0; e.setPose('idle'); e.wait = 0.5 + Math.random() * 0.5 } continue }
       if (e.st === 'free') {
         const rank = byDist.indexOf(e)
         const side = Math.sign(e.x - L.x) || 1
-        let tx = L.x + side * (rank < 2 ? 112 : 280)
+        let tx = L.x + side * (rank < 2 ? 120 : 290)
         if (this.locked != null) tx = Phaser.Math.Clamp(tx, this.locked + 70, this.locked + 1210)
         const ty = Phaser.Math.Clamp(L.y + e.laneOff, LANE_TOP, LANE_BOT)
         const dx = tx - e.x, dy = ty - e.y
@@ -374,44 +517,42 @@ export default class Street extends Phaser.Scene {
         e.face(L.x > e.x ? 1 : -1)
         e.wait -= dt
         const onScreen = this.locked == null || (e.x > this.locked + 40 && e.x < this.locked + 1240)
-        const close = onScreen && Math.abs(e.x - L.x) < 150 && Math.abs(e.y - L.y) < 22
+        const close = onScreen && Math.abs(e.x - L.x) < 160 && Math.abs(e.y - L.y) < 22
         if (close && e.wait <= 0 && rank < 2) {
-          if (e.kind === 'dealer') e.wait = 0 // dealers press harder
+          if (attackers >= 1) { e.wait = 0.4; continue } // one attacker at a time
           const mv = this.pickMove(e)
-          if (mv !== 'guard' && attackers >= 1) { e.wait = 0.3; continue }
           e.st = mv; e.t = 0; e.hitDone = false
-          e.setPose(mv === 'guard' ? 'guard' : 'idle')
+          e.setPose('idle')
           e.tint(TINT[mv])
         }
         continue
       }
-      if (e.st === 'strike') {
-        if (!e.hitDone && e.t > 0.45) {
-          e.hitDone = true; e.setPose('strike'); e.tint(null)
-          sfx(this, 'whoosh')
-          if (this.inReach(e, L, 130) && L.st !== 'down' && L.invuln <= 0) {
-            if (L.st === 'guard' && L.facing === -e.facing) {
-              // Guard beats Strike: he staggers
-              this.spark(L.x + 30 * L.facing, L.y - 180, 0x8fb4ff)
-              this.floatText(L.x, L.y - 270, 'BLOCK', '#8fb4ff')
-              sfx(this, 'block')
-              e.st = 'hurt'; e.t = -0.2; e.setPose('hurt')
-            } else this.hurtLisa(2, false, e)
+      if (MOVES.includes(e.st)) {
+        // wind-up (tinted) for 0.5 s, then the move lands; a thrower steps in to reach her
+        if (!e.hitDone && e.st === 'throw') {
+          const side = Math.sign(e.x - L.x) || 1
+          let gx = L.x + side * 85
+          if (this.locked != null) gx = Phaser.Math.Clamp(gx, this.locked + 40, this.locked + 1240)
+          e.face(L.x > e.x ? 1 : -1)
+          if (Math.abs(gx - e.x) > 4) e.x += Math.sign(gx - e.x) * Math.min(Math.abs(gx - e.x), 260 * dt)
+        }
+        e.moveTag = e.moveTag || this.add.text(0, 0, '', { fontFamily: 'Bangers', fontSize: '26px', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5)
+        e.moveTag.setText(e.hitDone ? '' : e.st.toUpperCase()).setColor(TINT_CSS[e.st]).setPosition(e.x, e.y - 300).setDepth(e.y + 2)
+        if (!e.hitDone && e.t > 0.5) {
+          e.hitDone = true; e.setPose(e.st); e.tint(null)
+          sfx(this, e.st === 'punch' ? 'whoosh' : 'whooshBig')
+          if (this.inReach(e, L, E_REACH[e.st]) && L.st !== 'down' && L.st !== 'flip' && L.invuln <= 0) {
+            if (MOVES.includes(L.st) && !(L.st === 'throw' && L.whiff) && this.inReach(L, e, REACH[L.st]) && (BEATS[L.st] === e.st || L.best > 0)) {
+              // her move beats his: he is countered
+              this.floatText(e.x, e.y - 300, 'COUNTER!', '#7dffb0')
+              this.hurtEnemy(e, 2, 80, true)
+            } else {
+              if (e.st === 'throw') this.floatText(L.x, L.y - 280, 'THROWN', '#ffe27a')
+              this.hurtLisa(E_DMG[e.st], e.st === 'throw', e)
+            }
           }
         }
-        if (e.st === 'strike' && e.t > 0.85) { e.st = 'free'; e.t = 0; e.setPose('idle'); e.wait = 0.6 + Math.random() * 0.7 }
-      } else if (e.st === 'grab') {
-        if (!e.hitDone && e.t > 0.45) {
-          e.hitDone = true; e.setPose('grab'); e.tint(null)
-          sfx(this, 'whooshBig')
-          if (this.inReach(e, L, 105) && L.st !== 'down' && L.invuln <= 0) {
-            if (L.st === 'strike') this.hurtEnemy(e, 1, 30) // Strike beats Grab
-            else { this.floatText(L.x, L.y - 280, 'GRABBED', '#ffe27a'); this.hurtLisa(3, true, e) }
-          }
-        }
-        if (e.st === 'grab' && e.t > 0.95) { e.st = 'free'; e.t = 0; e.setPose('idle'); e.wait = 0.7 + Math.random() * 0.6 }
-      } else if (e.st === 'guard') {
-        if (e.t > 1.1) { e.st = 'free'; e.t = 0; e.tint(null); e.setPose('idle'); e.wait = 0.3 }
+        if (MOVES.includes(e.st) && e.t > 0.95) { e.st = 'free'; e.t = 0; e.setPose('idle'); e.wait = 0.7 + Math.random() * 0.7 }
       }
     }
   }
@@ -434,6 +575,7 @@ export default class Street extends Phaser.Scene {
   }
 
   lockAt(camX) {
+    this.clearPickups()
     this.locked = camX
     this.goArrow.setVisible(false)
     this.tweens.add({ targets: this.cam, scrollX: camX, duration: 400, ease: 'Sine.out' })
@@ -449,6 +591,9 @@ export default class Street extends Phaser.Scene {
   // spawn: [[kind, x, y, delay]]; x is absolute, or relative to the locked camera when `relative`
   startWave(spawn, onClear, relative = false) {
     this.wave = { onClear: onClear || (() => this.unlock()), count: spawn.length }
+    this.time.delayedCall(500, () => this.dropPickup())
+    const w = this.wave
+    this.time.delayedCall(9000, () => this.wave === w && this.lisa.hp <= this.lisa.maxHp * 0.6 && this.dropPickup())
     spawn.forEach(([kind, x, y, delay]) => this.time.delayedCall(delay * 1000, () => {
       this.spawn(kind, relative ? this.locked + x : x, y)
       if (kind === 'reader' && this.L.readerTalk && !this.readerTalked) {
@@ -471,6 +616,8 @@ export default class Street extends Phaser.Scene {
   }
 
   talk(lines, after) {
+    if (this.tipUp) { this.tipUp = false; this.caption.hide() }
+    this.enemies.forEach((e) => { if (e.moveTag) e.moveTag.setText(''); if (MOVES.includes(e.st) && !e.hitDone) { e.st = 'free'; e.t = 0; e.tint(null); e.wait = 0.8 } })
     const prev = this.mode
     this.mode = 'cutscene'
     this.dlg.play(lines, () => { this.mode = prev === 'cutscene' ? 'brawl' : prev; after && after() })
@@ -660,7 +807,7 @@ export default class Street extends Phaser.Scene {
     const L = this.lisa
     L.sync(dt)
     if (L.pose === 'walkpass' || L.pose === 'walkb') L.sprite.y -= 4 // body rides higher as the leg passes
-    if (L.invuln > 0) L.sprite.setAlpha(Math.sin(this.elapsed * 40) > 0 ? 1 : 0.4); else L.sprite.setAlpha(1)
+    if (L.invuln > 0 && L.st !== 'flip') L.sprite.setAlpha(Math.sin(this.elapsed * 40) > 0 ? 1 : 0.4); else L.sprite.setAlpha(1)
     this.enemies.forEach((e) => e.st !== 'dead' && e.sync(dt))
     if (this.boss) this.boss.sync(dt)
     const tx = L.x - 80 * L.facing, ty = L.y - 300 + Math.sin(this.elapsed * 3) * 8
@@ -678,6 +825,11 @@ export default class Street extends Phaser.Scene {
       const h = L.habits
       this.habitBars.forEach(({ m, bar }) => bar.setSize(28, h.length ? (34 * h.filter((x) => x === m).length) / 8 : 0))
     }
+    const pw = [L.shield > 0 && `SHIELD ${Math.ceil(L.shield)}`, L.best > 0 && `BEST RESPONSE ${Math.ceil(L.best)}`].filter(Boolean).join('   ')
+    this.powerLabel.setText(pw)
+    const auraOn = L.shield > 0 || L.best > 0
+    this.aura.setVisible(auraOn)
+    if (auraOn) this.aura.setPosition(L.x, L.y - 2).setDepth(L.y - 0.5).setStrokeStyle(5, L.shield > 0 ? 0x5ce1d6 : 0xffd166, 0.6 + 0.4 * Math.sin(this.elapsed * 10))
     this.muteLabel.setText(isMuted() ? 'M: music off' : 'M: music on')
     this.presses.clear()
   }

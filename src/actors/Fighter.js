@@ -1,6 +1,8 @@
 // A side-scrolling fighter drawn from posed cutout sprites (<prefix>_<pose>).
 // Lisa's art faces right; enemy art faces left.
 export const SPRITE_SCALE = 0.5
+// move names map onto the older pose textures
+const POSE_ALIAS = { punch: 'strike', throw: 'grab' }
 
 export class Fighter {
   constructor(scene, prefix, x, y, { artFacing = 1, hp = 5 } = {}) {
@@ -19,10 +21,12 @@ export class Fighter {
     this.sprite = scene.add.image(x, y, `${prefix}_idle`).setScale(SPRITE_SCALE)
     this.setPose('idle')
     this.bob = Math.random() * 6
+    this.lift = 0
   }
 
   setPose(pose) {
-    const key = `${this.prefix}_${pose}`
+    let key = `${this.prefix}_${pose}`
+    if (!this.scene.textures.exists(key) && POSE_ALIAS[pose]) { pose = POSE_ALIAS[pose]; key = `${this.prefix}_${pose}` }
     if (!this.scene.textures.exists(key)) return
     this.pose = pose
     this.sprite.setTexture(key)
@@ -55,7 +59,7 @@ export class Fighter {
   sync(dt = 0) {
     this.bob += dt * 5
     const breathe = this.pose === 'idle' && this.state === 'free' ? Math.sin(this.bob) * 0.008 : 0
-    this.sprite.setPosition(this.x, this.y)
+    this.sprite.setPosition(this.x, this.y - this.lift)
     this.sprite.setScale(SPRITE_SCALE * (1 - breathe * 0.5), SPRITE_SCALE * (1 + breathe))
     this.sprite.setDepth(this.y)
     this.shadow.setPosition(this.x, this.y).setDepth(this.y - 1)

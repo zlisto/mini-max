@@ -14,9 +14,10 @@ export const LEVELS = {
     grunt: 'grunt', habitMeter: false,
     intro: [
       { who: 'tempo', text: "Neon Strip. Zero's crew runs these streets." },
-      { who: 'tempo', text: 'Every move beats one and loses to one: Strike beats Grab, Grab beats Guard, Guard beats Strike.' },
-      { who: 'tempo', text: 'Watch them wind up: red means a strike is coming, blue is a guard, yellow is a grab.' },
-      { who: 'lisa', text: 'J to strike, K to guard, L to grab. Got it.' },
+      { who: 'tempo', text: 'Every move beats one and loses to one. Kick beats Punch: longer reach. Punch beats Throw: faster. Throw beats Kick: catch the leg.' },
+      { who: 'tempo', text: 'Watch them wind up: red means a punch is coming, blue a kick, yellow a throw. Answer with the move that beats it.' },
+      { who: 'lisa', text: 'J to punch, K to kick, L to throw. Got it.' },
+      { who: 'tempo', text: 'And grab the glowing orbs on the floor. Each one is a game theory power-up.' },
     ],
     readerTalk: [
       { who: 'tempo', text: 'Purple shadow! That one watches your last few moves and counters your favourite.' },
@@ -34,7 +35,7 @@ export const LEVELS = {
       intro: [
         { who: 'brick', text: 'Nobody gets past Brick.' },
         { who: 'tempo', text: "He's too big to brawl. This is a standoff: you both pick a move at the same moment." },
-        { who: 'tempo', text: 'The card shows your points for every pair of moves.' },
+        { who: 'tempo', text: "The card shows your points for every pair of moves. These are Brick's stakes, not the street rule: read the card." },
         { who: 'tempo', text: 'Brick answers whatever you keep doing. So for each move, look for the worst he can do to you.' },
         { who: 'tempo', text: 'Then pick the move whose worst case is best. Score what the card can guarantee you, and your hit lands.' },
       ],
@@ -75,7 +76,7 @@ export const LEVELS = {
     },
     end: {
       title: 'NEON STRIP CLEARED', notes: BOOK_NOTES, chapter: 'Chapter 2',
-      dagger: 'The Strike / Guard / Grab triangle and the fight-card numbers are inventions of this game, not from the book.',
+      dagger: 'The Punch / Kick / Throw triangle, the power-ups and the fight-card numbers are inventions of this game, not from the book.',
       next: { level: 'w2', label: 'Next: Casino Arcade ▶' },
     },
   },
@@ -149,7 +150,7 @@ export const LEVELS = {
     },
     end: {
       title: 'CASINO ARCADE CLEARED', notes: BOOK_NOTES_W2, chapter: 'Chapter 3',
-      dagger: "The wheel, the 12 slices and the card numbers are inventions of this game, not from the book. Card numbers are each table's stakes and can differ from the street's Strike/Guard/Grab rules.",
+      dagger: "The wheel, the 12 slices, the power-ups and the card numbers are inventions of this game, not from the book. Card numbers are each table's stakes and can differ from the street's Punch/Kick/Throw rules.",
       next: null,
     },
   },

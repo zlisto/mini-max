@@ -1,13 +1,13 @@
 // Game-theory data and solvers for the prototype.
 // Book: Osborne & Rubinstein, A Course in Game Theory (1994). Page refs are printed book pages.
 
-export const MOVES = ['strike', 'guard', 'grab']
-export const MOVE_LABEL = { strike: 'Strike', guard: 'Guard', grab: 'Grab' }
-export const MOVE_KEY = { strike: 'J', guard: 'K', grab: 'L' }
+export const MOVES = ['punch', 'kick', 'throw']
+export const MOVE_LABEL = { punch: 'Punch', kick: 'Kick', throw: 'Throw' }
+export const MOVE_KEY = { punch: 'J', kick: 'K', throw: 'L' }
 
 // Street-brawl rule (game fiction †, not from the book): each move beats one and loses to one.
-// Strike beats Grab, Grab beats Guard, Guard beats Strike.
-export const BEATS = { strike: 'grab', grab: 'guard', guard: 'strike' }
+// Kick beats Punch (longer reach), Punch beats Throw (faster), Throw beats Kick (catch the leg).
+export const BEATS = { kick: 'punch', punch: 'throw', throw: 'kick' }
 
 // Prologue: the Prisoner's Dilemma, Example 16.2 / Figure 17.1, p.16-17.
 // Book labels: Don't Confess / Confess. Story labels: Stay quiet / Sell out.
