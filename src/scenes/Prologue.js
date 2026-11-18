@@ -31,12 +31,12 @@ export default class Prologue extends Phaser.Scene {
     this.presses = trackPresses(this)
 
     this.dlg.play([
-      { text: 'Equilibria. Opening night of the Grand Tour.' },
-      { who: 'juno', text: 'Lisa? Why did they split us up?' },
-      { who: 'zero', text: 'Two stars. Two dressing rooms. One little game.', do: () => this.tweens.add({ targets: [this.zero.sprite, this.zero.shadow], alpha: { from: 0, to: 1 }, duration: 600 }) },
-      { who: 'zero', text: "I'm asking you both the same question. You can't hear each other." },
-      { who: 'zero', text: "Stay quiet, or sell your partner out. Pick fast." },
-      { who: 'tempo', text: "Lisa! I drew his deal as a card. Your number is pink, Juno's is teal. Bigger is better.", do: () => this.showCard() },
+      { text: 'Opening night of the Grand Tour, in the city of Equilibria. The curtain goes up in ten minutes.' },
+      { who: 'juno', text: 'Lisa? Why did they put us in separate rooms?' },
+      { who: 'zero', text: "Because I wanted a word with each of you alone, my dears. Don't bother shouting; the walls are very thick.", do: () => this.tweens.add({ targets: [this.zero.sprite, this.zero.shadow], alpha: { from: 0, to: 1 }, duration: 600 }) },
+      { who: 'zero', text: "I'm making you both the same offer, and neither of you will hear what the other says." },
+      { who: 'zero', text: "You can stay quiet, or you can sell your partner out. Decide before the curtain goes up." },
+      { who: 'tempo', text: "Lisa, I drew his deal as a card for you. Your points are in pink and Juno's are in teal, and bigger is better.", do: () => this.showCard() },
     ], () => this.startChoice())
   }
 
@@ -99,17 +99,17 @@ export default class Prologue extends Phaser.Scene {
     const lines = [
       { who: 'lisa', text: r === 'quiet' ? "I'm staying quiet." : "...I'm selling her out." },
       { who: 'juno', text: 'I sold you out. I\'m sorry, Lisa.' },
-      { who: 'tempo', text: `You got ${a}. Juno got ${b}.` },
-      { who: 'tempo', text: 'Look at the card. If Juno stays quiet: Sell out gets you 4, quiet gets 3.', do: () => hl('quiet', true) },
-      { who: 'tempo', text: 'If Juno sells out: Sell out gets you 1, quiet gets 0.', do: () => { hl('quiet', false); hl('sell', true) } },
+      { who: 'tempo', text: `You got ${a} points and Juno got ${b}.` },
+      { who: 'tempo', text: 'Look at the card. If Juno stays quiet, selling out gets you 4 and staying quiet gets you 3.', do: () => hl('quiet', true) },
+      { who: 'tempo', text: 'And if Juno sells out, selling out gets you 1 and staying quiet gets you 0.', do: () => { hl('quiet', false); hl('sell', true) } },
       { who: 'tempo', text: 'Whatever she does, selling out pays you more. Her card works the same way.', do: () => hl('sell', false) },
-      { who: 'tempo', text: 'So you both sell out and get 1 each. Both staying quiet would have paid 3 each.' },
-      { who: 'zero', text: 'Rational players. My favourite kind.' },
-      { who: 'zero', text: 'For me to win, you must lose. Every game there is works like that.' },
+      { who: 'tempo', text: 'So if you both play it safe, you both sell out and get 1 each, when staying quiet would have paid 3 each.' },
+      { who: 'zero', text: 'Spoken like a pair of rational players. I do love those.' },
+      { who: 'zero', text: "For me to win, somebody has to lose. That's how every game works, my dears." },
       { who: 'juno', text: 'Lisa, the setlist! Don\'t let him take our songs!', do: () => this.takeJuno() },
       { who: 'lisa', text: 'Juno!' },
-      { who: 'tempo', text: "He tore the setlist. Its pages are scattered across his whole Tour." },
-      { who: 'lisa', text: "Then I'll win them back. And next time, I'll read the game first." },
+      { who: 'tempo', text: "He tore up your setlist, and the pages are scattered all over his Tour." },
+      { who: 'lisa', text: "Then I'll win back every page, and next time I'll read the game before I play it." },
     ]
     this.time.delayedCall(500, () => this.dlg.play(lines, () => this.leave()))
   }

@@ -13,14 +13,14 @@ export const LEVELS = {
     },
     grunt: 'grunt', habitMeter: false,
     intro: [
-      { who: 'tempo', text: "Neon Strip. Zero's crew runs these streets." },
-      { who: 'tempo', text: 'Every move beats one and loses to one. Kick beats Punch: longer reach. Punch beats Throw: faster. Throw beats Kick: catch the leg.' },
+      { who: 'tempo', text: "Welcome to the Neon Strip. Zero's crew runs these streets." },
+      { who: 'tempo', text: 'Each move beats one and loses to one. Kicks out-reach punches, punches are faster than throws, and throws catch kicks.' },
       { who: 'tempo', text: 'Watch them wind up: red means a punch is coming, blue a kick, yellow a throw. Answer with the move that beats it.' },
-      { who: 'lisa', text: 'J to punch, K to kick, L to throw. Got it.' },
+      { who: 'lisa', text: 'So J punches, K kicks and L throws. Got it.' },
       { who: 'tempo', text: 'And grab the glowing orbs on the floor. Each one is a game theory power-up.' },
     ],
     readerTalk: [
-      { who: 'tempo', text: 'Purple shadow! That one watches your last few moves and counters your favourite.' },
+      { who: 'tempo', text: 'See the purple shadow? That one watches your last few moves and counters your favourite.' },
       { who: 'tempo', text: "Mash one button and it'll read you like a book. Mix it up." },
     ],
     triggers: [
@@ -35,15 +35,15 @@ export const LEVELS = {
       intro: [
         { who: 'brick', text: 'Nobody gets past Brick.' },
         { who: 'tempo', text: "He's too big to brawl. This is a standoff: you both pick a move at the same moment." },
-        { who: 'tempo', text: "The card shows your points for every pair of moves. These are Brick's stakes, not the street rule: read the card." },
+        { who: 'tempo', text: "The card shows your points for every pair of moves. Brick plays by his own stakes, not the street rules, so read it." },
         { who: 'tempo', text: 'Brick answers whatever you keep doing. So for each move, look for the worst he can do to you.' },
-        { who: 'tempo', text: 'Then pick the move whose worst case is best. Score what the card can guarantee you, and your hit lands.' },
+        { who: 'tempo', text: 'Then pick the move whose worst case is best. Get the score the card guarantees you, and your hit lands.' },
       ],
       outro: [
-        { who: 'brick', text: '...Fine. Go.' },
+        { who: 'brick', text: '...Fine. You can go.' },
         { who: 'tempo', text: "That's minimax: pick the move with the best guarantee." },
-        { who: 'tempo', text: "In a fight where his win is your loss, that's a steady state. Neither of you wants to switch." },
-        { who: 'lisa', text: 'Mini... Max. Huh. Guess the name fits.' },
+        { who: 'tempo', text: "In a fight where his win is your loss, that's a steady state, because neither of you wants to switch." },
+        { who: 'lisa', text: 'Mini... Max. Huh, I guess the name fits.' },
       ],
     },
     boss: {
@@ -52,16 +52,16 @@ export const LEVELS = {
       phaseIntros: [
         [
           { who: 'sadie', text: 'Zero says every fight has a loser. Want to guess who?' },
-          { who: 'tempo', text: 'Her card is nasty. Every move can cost you. Find the one that costs the least, worst case.' },
+          { who: 'tempo', text: 'Her card is nasty, because every move can cost you. Find the one whose worst case costs the least.' },
           { who: 'lisa', text: "Let's read the card and find out." },
         ],
         [
           { who: 'sadie', text: "Let's see you read a card you can't see." },
-          { who: 'tempo', text: "Some cells are hidden. You don't need them all. One bad cell is enough to sink a move." },
+          { who: 'tempo', text: "Some cells are hidden, but you don't need them all. One bad cell is enough to sink a move." },
         ],
         [
-          { who: 'sadie', text: "Fine. Here's MY card. My winnings, not yours." },
-          { who: 'tempo', text: 'Every point she wins, you lose. Her +2 is your −2. Flip it in your head.' },
+          { who: 'sadie', text: "Fine, then read MY card. It shows my winnings, not yours." },
+          { who: 'tempo', text: 'Every point she wins, you lose, so her +2 is your −2. Flip the signs in your head.' },
         ],
       ],
       taunt: { who: 'sadie', text: 'Crew! Ruin her night.' },
@@ -70,8 +70,8 @@ export const LEVELS = {
         { who: 'sadie', text: 'Zero said... every fight has a loser.' },
         { who: 'lisa', text: 'This one did. Not every game is a fight, though.' },
         { who: 'tempo', text: 'Page one of the setlist! Hold it up, Lisa.' },
-        { who: 'juno', text: 'Lisa? I can hear you through the song. Keep going.' },
-        { who: 'tempo', text: "The next page flew toward the Casino Arcade. Zero's watching." },
+        { who: 'juno', text: "Lisa? I can hear you through the page. Keep going, I'm right here." },
+        { who: 'tempo', text: "The next page flew toward the Casino Arcade, and Zero's watching us." },
       ],
     },
     end: {
@@ -90,11 +90,11 @@ export const LEVELS = {
     },
     grunt: 'dealer', habitMeter: true,
     intro: [
-      { who: 'tempo', text: 'The Casino Arcade. The setlist page fluttered in here.' },
-      { who: 'zero', cue: 'zeroScreen', text: 'Welcome to my house, Lisa. Here, I make the rules.' },
+      { who: 'tempo', text: 'This is the Casino Arcade. The setlist page fluttered in here somewhere.' },
+      { who: 'zero', cue: 'zeroScreen', text: 'Welcome to my house, Lisa, where I make all the rules.' },
       { who: 'zero', text: "If no single move is safe, there's no steady way to play. The house always wins." },
       { who: 'tempo', cue: 'zeroScreenOff', text: 'Every dealer here reads habits like cards. The MIX bars at the bottom show your last eight moves.' },
-      { who: 'lisa', text: "Lean on one move and they'll counter it. Got it. Spread it out." },
+      { who: 'lisa', text: "So if I lean on one move, they'll counter it. I'll spread it out." },
     ],
     triggers: [
       { id: 'wave1', x: 560, cam: 0, spawn: [['dealer', 1420, 560, 0], ['dealer', 1500, 630, 1.0], ['dealer', -160, 600, 2.4]] },
@@ -107,16 +107,16 @@ export const LEVELS = {
       phases: [{ hp: 3, size: 2, view: 'lisa', read: 'live' }],
       intro: [
         { who: 'penny', text: 'Heads or tails, sugar? I always know which.' },
-        { who: 'tempo', text: "On Sadie's card one move had a safe worst case. Here none does, like matching pennies." },
-        { who: 'tempo', text: "So don't pick one move. Set your wheel: 12 slices, split between moves. The spin picks." },
+        { who: 'tempo', text: "On Sadie's card, one move had a safe worst case. This is like matching pennies, where none does." },
+        { who: 'tempo', text: "So don't pick one move. Split the 12 slices of your wheel between your moves, and let the spin pick." },
         { who: 'tempo', text: 'She sees your wheel and picks the answer that hurts you most.' },
-        { who: 'tempo', text: 'The bottom row shows your average against each answer. Make them match: then she has nothing to aim at.' },
+        { who: 'tempo', text: 'The bottom row shows your average against each answer. Make them match, and she has nothing to aim at.' },
       ],
       outro: [
-        { who: 'penny', text: '...Heads, tails, you flipped me.' },
-        { who: 'tempo', text: "That's a mixed strategy. No single move was safe, but the right mix is. She couldn't push it lower." },
-        { who: 'tempo', text: "Here's the big one: every game with finitely many moves has at least one steady mix: an equilibrium." },
-        { who: 'lisa', text: "So Zero's wrong. There is a steady way to play: a steady mix, not a steady move." },
+        { who: 'penny', text: "...Heads or tails, you kept me guessing." },
+        { who: 'tempo', text: "That's a mixed strategy. No single move was safe, but the right mix is, and she couldn't push your average any lower." },
+        { who: 'tempo', text: "Here's the big one: every game with finitely many moves has at least one steady mix, called an equilibrium." },
+        { who: 'lisa', text: "So Zero's wrong! There's a steady way to play after all, as long as I mix instead of sticking to one move." },
       ],
     },
     boss: {
@@ -124,17 +124,17 @@ export const LEVELS = {
       phases: [{ hp: 3, size: 2, view: 'lisa', read: 'none' }, { hp: 3, size: 2, view: 'enemy', read: 'none' }, { hp: 3, size: 3, view: 'lisa', read: 'after' }],
       phaseIntros: [
         [
-          { who: 'lou', text: 'Place your bets. My table, no hints.' },
-          { who: 'tempo', text: 'No averages row now. Same goal: the split where both his answers pay you the same.' },
-          { who: 'tempo', text: "Your average vs an answer: each move's slices × its points there, added up, ÷ 12." },
+          { who: 'lou', text: "Place your bets, kid. My table doesn't do hints." },
+          { who: 'tempo', text: "There's no averages row this time, but the goal hasn't changed: find the split where both his answers pay you the same." },
+          { who: 'tempo', text: "For your average against an answer, multiply each move's slices by its points there, add it all up, then divide by 12." },
         ],
         [
-          { who: 'lou', text: 'House card now, kid. My winnings. Bets down.' },
-          { who: 'tempo', text: 'His +2 is your −2. Make both his answers pay HIM the same: then reading your wheel gains him nothing.' },
+          { who: 'lou', text: "Now we play the house card, kid, and it shows my winnings. Bets down." },
+          { who: 'tempo', text: 'His +2 is your −2. Make both his answers pay HIM the same, so reading your wheel gains him nothing.' },
         ],
         [
-          { who: 'lou', text: 'All three moves, all three answers. Spin, little star.' },
-          { who: 'tempo', text: "Three answers to balance. After each spin I'll show that wheel's averages. Use them." },
+          { who: 'lou', text: 'Now you get all three moves and I get all three answers. Spin, little star.' },
+          { who: 'tempo', text: "You have three answers to balance now. After each spin I'll show that wheel's averages, so use them." },
         ],
       ],
       taunt: { who: 'lou', text: 'Dealers! Reshuffle the lady.' },
@@ -142,9 +142,9 @@ export const LEVELS = {
       outro: [
         { who: 'lou', text: 'The house... always wins.' },
         { who: 'lisa', text: 'Not this time. You read my wheel, and every answer still paid the same.' },
-        { who: 'zero', cue: 'zeroSweep', text: 'One table. I own the whole Tour, Lisa.' },
+        { who: 'zero', cue: 'zeroSweep', text: 'You took one table, Lisa. I own the whole Tour.' },
         { who: 'tempo', text: 'Page two of the setlist! Hold it up.' },
-        { who: 'juno', text: "Lisa! You found the mix that never cracks. I'm still here. Hurry." },
+        { who: 'juno', text: "Lisa, you found a mix he can't crack! I'm still here, so please hurry." },
         { who: 'tempo', text: 'The next page blew into the Hall of Mirrors. Zero says no one can predict a rival.' },
       ],
     },
