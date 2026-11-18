@@ -4,6 +4,7 @@ import { BOOK_NOTES } from './games.js'
 import { BOOK_NOTES_W2 } from './mix.js'
 import { BOOK_NOTES_W3 } from './dominance.js'
 import { BOOK_NOTES_W4 } from './knowledge.js'
+import { BOOK_NOTES_W5 } from './trees.js'
 
 export const LEVELS = {
   w1: {
@@ -318,6 +319,90 @@ export const LEVELS = {
     end: {
       title: 'SIGNAL TOWER CLEARED', notes: BOOK_NOTES_W4, chapter: 'Chapter 5',
       dagger: 'The lamps, brackets, beacons, flares and Tempo as your partner are inventions of this game. Dousing until nothing changes is the game\'s way to find the largest self-evident event among the gold nights. Striking only on common knowledge is the game\'s rule. Hold and charge stand for the book\'s A and B, and the HOLD pass retells the proof of Proposition 83.1 in words.',
+      next: { level: 'w5', label: 'Next: The Chain Store ▶' },
+    },
+  },
+
+  w5: {
+    id: 'w5', title: 'THE CHAIN STORE', chapter: 'Chapter 6: Extensive Games', music: 'level_05', width: 4400, page: 5, skin: 'lisag',
+    art: {
+      far: 'store_far', mids: ['store_mid_a'], ground: 'store_ground', overlap: 100,
+      stage: { key: 'store_stage', x: 3900, scale: 0.9 },
+      fg: [['fg_carts', 900, 0.9], ['fg_boxes', 1900, 0.9], ['fg_carts', 3000, 0.9], ['fg_boxes', 4200, 0.9]],
+    },
+    grunt: 'bluffer', habitMeter: false, talkKind: 'bluffer',
+    intro: [
+      { who: 'tempo', text: 'A whole block of shops that look the same, just as Juno said. Page five landed here, and every shop belongs to one man.' },
+      { who: 'lisa', text: 'The hoodie is for the long game. Something tells me this one comes in turns.' },
+      { who: 'zero', cue: 'zeroScreen', text: 'My dears, meet Mr. Chainsworth. He owns every store here, and he swears he crushes anyone who opens next door.' },
+      { who: 'zero', text: 'A threat like that always works. Nobody walks into a fight they know they will lose.' },
+      { who: 'lisa', cue: 'zeroScreenOff', text: "Only if he'd really throw that punch when the moment came." },
+    ],
+    readerTalk: [
+      { who: 'tempo', text: "That's a bluffer. He shouts a threat, but he'd never carry it out. Hit him mid-shout." },
+      { who: 'lisa', text: 'So if I hang back and believe him, he just walks off and catches his breath. If I call it, he folds.' },
+    ],
+    triggers: [
+      { id: 'wave1', x: 560, cam: 0, spawn: [['grunt', 1420, 560, 0], ['bluffer', 1180, 630, 1.0], ['grunt', -160, 600, 2.4]] },
+      { id: 'wave2', x: 1750, cam: 1250, spawn: [['bluffer', 2620, 560, 0], ['bluffer', 2660, 630, 0.8], ['grunt', 1100, 600, 2.0], ['bluffer', 2700, 590, 3.4]] },
+      { id: 'elite', x: 2800, cam: 2300, standoff: 'elite' },
+      { id: 'boss', x: 3620, cam: 4400 - 1280, standoff: 'boss' },
+    ],
+    elite: {
+      prefix: 'bluster', name: 'Bluster', label: 'BLUSTER', who: 'bluster', kind: 'tree', pronoun: 'he',
+      phases: [{ hp: 2, cards: [{ mode: 'tree', depth: 2 }, { mode: 'tree', depth: 2, rootBranch: 3 }] }],
+      intro: [
+        { who: 'bluster', text: "Mr. Chainsworth pays me to keep this sidewalk clear, kid. One more step and I flatten you, and I keep my promises." },
+        { who: 'tempo', text: 'This card is a game tree. You move first from the top and he answers. The numbers at the ends are what you each get.' },
+        { who: 'tempo', text: 'Begin at the bottom, at a choice with only payoffs below it, and pick the branch that pays whoever moves there most.' },
+        { who: 'tempo', text: 'Then work upward. When you reach his threat, ask whether he would really carry it out once he got there.' },
+      ],
+      outro: [
+        { who: 'bluster', text: "Okay, okay. You worked out which of my threats I'd really carry out." },
+        { who: 'lisa', text: "So a threat only counts if he'd still want to carry it out when the time came. Some of his would, and some wouldn't." },
+        { who: 'tempo', text: 'Solving from the end is backward induction. It gives a move at every point, even ones play never reaches.' },
+        { who: 'tempo', text: 'A plan for every point where you move is a strategy. In a Nash equilibrium, neither side gains by switching alone.' },
+        { who: 'tempo', text: 'Plans that trust an empty threat can still be a Nash equilibrium, because the threat is never tested.' },
+        { who: 'tempo', text: "But they aren't subgame perfect, because he'd switch when tested. Testing one choice at a time is enough to check it." },
+      ],
+    },
+    boss: {
+      prefix: 'chains', name: 'Chainsworth', label: 'MR. CHAINSWORTH', who: 'chains', kind: 'tree', pronoun: 'he', standY: 520,
+      phases: [
+        { hp: 2, cards: [{ mode: 'tree', depth: 3 }] },
+        { hp: 1, cards: [{ mode: 'centipede', T: 6 }] },
+        { hp: 1, cards: [{ mode: 'chain', K: 3 }] },
+      ],
+      phaseIntros: [
+        [
+          { who: 'chains', cue: 'chainsSlam', text: 'Zero gave me this whole block, little singer, and your page with it. Any shop that opens next to mine gets smashed.' },
+          { who: 'tempo', text: 'The trees are taller now, and on some branches you move twice. The rule is the same, so start at the bottom and climb.' },
+        ],
+        [
+          { who: 'chains', text: "Fine, let's deal instead. There's a pile of cash, and every time one of us says go on, the pile grows." },
+          { who: 'tempo', text: 'Whoever stops takes the larger share right then. Begin with the very last choice and work back.' },
+        ],
+        [
+          { who: 'chains', text: 'This is my real game. Every town on the block gets a challenger, and I fight the first one so the rest stay out.' },
+          { who: 'tempo', text: 'In each town a shop goes In or stays Out, and then he fights or folds. His money adds up over every town.' },
+          { who: 'tempo', text: 'Start with the last town, where nobody is left to scare. Then ask what fighting earlier could buy him.' },
+        ],
+      ],
+      taunt: { who: 'chains', text: 'Bluffers, get out there and soften her up. I need a minute.' },
+      interludes: [[['bluffer', 1400, 560, 0], ['bluffer', -140, 630, 0.6]], [['bluffer', 1400, 560, 0], ['grunt', -140, 630, 0.6], ['bluffer', 1450, 600, 2]]],
+      outro: [
+        { who: 'chains', text: 'Every shop on the block opened, and I let them. From the last town back to the first, fighting never paid.' },
+        { who: 'lisa', text: "Zero said threats always work. Empty ones only fool people who never check whether they'd be carried out." },
+        { who: 'tempo', text: 'The book admits it feels wrong. After nine fights, the logic says the tenth shop should still expect a fold.' },
+        { who: 'zero', cue: 'zeroSweep', text: "A tidy little tree, my dears. Next we bargain, and whoever holds out longest wins." },
+        { who: 'tempo', text: "That's page five of the setlist! Hold it up." },
+        { who: 'juno', text: "Lisa, I heard that whole block go quiet! Now it's raining money here, and every second they argue, more blows away." },
+        { who: 'tempo', text: 'The next page blew to the Money Rain plaza, where every deal shrinks while you wait.' },
+      ],
+    },
+    end: {
+      title: 'CHAIN STORE CLEARED', notes: BOOK_NOTES_W5, chapter: 'Chapter 6',
+      dagger: "The trees, their numbers, the bluffers, the move names and Lisa playing every shop were made up for this game. Fold is the book's C. The cash ladder is Figure 107.1 with a constant added, and the towns keep Figure 105.1's orderings.",
       next: null,
     },
   },

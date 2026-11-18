@@ -15,6 +15,8 @@ const WHO = {
   mira: { name: 'MIRA GLASS', key: 'mira_portrait', side: 'right', color: '#c79bff' },
   flicker: { name: 'FLICKER', key: 'flicker_portrait', side: 'right', color: '#ffd166' },
   vox: { name: 'VOX STATIC', key: 'vox_portrait', side: 'right', color: '#ff9ad5' },
+  bluster: { name: 'BLUSTER', key: 'bluster_portrait', side: 'right', color: '#ffd166' },
+  chains: { name: 'MR. CHAINSWORTH', key: 'chains_portrait', side: 'right', color: '#ff8a8a' },
   dealer: { name: 'DEALER', key: 'dealer_idle', side: 'right', color: '#ff9a5c' },
 }
 
@@ -54,7 +56,9 @@ export class Dialogue {
     const line = this.lines.shift()
     if (!line) { this.close(); return }
     if (line.do) line.do()
-    const who = WHO[line.who]
+    const base = WHO[line.who]
+    const skin = line.who === 'lisa' && this.scene.L && this.scene.L.skin
+    const who = skin ? { ...base, key: `${skin}_portrait` } : base
     this.voice = VOICE[line.who] ?? 0.9 // 0 = silent (the mime)
     const hasP = who && this.scene.textures.exists(who.key)
     this.portrait.setVisible(!!hasP)

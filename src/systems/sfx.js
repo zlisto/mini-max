@@ -119,7 +119,7 @@ const SOUNDS = {
 }
 
 // Speaker voices for dialogue blips (pitch multipliers).
-export const VOICE = { lisa: 1.25, tempo: 1.7, zero: 0.62, juno: 1.15, sadie: 1.05, brick: 0.5, grunt: 0.75, penny: 0.95, lou: 0.8, dealer: 0.85, echo: 0, mira: 1.0, mimic: 0.75, flicker: 1.3, vox: 0.7, signal: 0.8 }
+export const VOICE = { lisa: 1.25, tempo: 1.7, zero: 0.62, juno: 1.15, sadie: 1.05, brick: 0.5, grunt: 0.75, penny: 0.95, lou: 0.8, dealer: 0.85, echo: 0, mira: 1.0, mimic: 0.75, flicker: 1.3, vox: 0.7, signal: 0.8, bluster: 0.8, chains: 0.45, bluffer: 0.85 }
 
 export function sfx(scene, name, arg) {
   try {

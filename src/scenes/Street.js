@@ -5,6 +5,7 @@ import { Standoff } from '../ui/Standoff.js'
 import { MixStandoff } from '../ui/MixStandoff.js'
 import { ElimStandoff } from '../ui/ElimStandoff.js'
 import { SignalStandoff } from '../ui/SignalStandoff.js'
+import { TreeStandoff } from '../ui/TreeStandoff.js'
 import { BEATS, MOVES } from '../data/games.js'
 import { LEVELS } from '../data/levels.js'
 import { loadSave, writeSave } from '../systems/save.js'
@@ -53,7 +54,7 @@ export default class Street extends Phaser.Scene {
     this.cameras.main.fadeIn(400)
     this.buildWorld()
     this.enemies = []
-    this.lisa = new Fighter(this, 'lisa', 200, 590, { hp: 20 })
+    this.lisa = new Fighter(this, this.L.skin || 'lisa', 200, 590, { hp: 20 })
     Object.assign(this.lisa, { st: 'free', t: 0, habits: [], combo: 0, lastStrikeEnd: -9, invuln: 0, shield: 0, best: 0 })
     this.pickups = []
     this.aura = this.add.ellipse(0, 0, 150, 40).setStrokeStyle(5, 0x5ce1d6).setVisible(false)
@@ -85,10 +86,12 @@ export default class Street extends Phaser.Scene {
     if (this.checkpoint > 0) this.lisa.x = cp.x - 260
     this.cam.scrollX = Phaser.Math.Clamp(this.lisa.x - 400, 0, this.W - 1280)
     if (this.checkpoint === 0) this.showBanner()
-    if (this.checkpoint === 0) {
+    const seenIntro = this.registry.get(`seen:${this.levelId}:intro`)
+    if (this.checkpoint === 0 && !seenIntro) {
+      this.registry.set(`seen:${this.levelId}:intro`, true)
       this.mode = 'cutscene'
       this.time.delayedCall(1700, () => this.dlg.play(this.cued(this.L.intro), () => { this.mode = 'brawl' }))
-    }
+    } else if (this.checkpoint === 0 && this.L.tempoAcross) this.postTempo()
     this.goArrow = this.add.text(1180, 380, 'GO ▶', { fontFamily: 'Bangers', fontSize: '54px', color: '#ffd166', stroke: '#000', strokeThickness: 6 })
       .setScrollFactor(0).setDepth(5000).setVisible(false)
     this.tweens.add({ targets: this.goArrow, x: 1200, duration: 400, yoyo: true, repeat: -1 })
@@ -109,7 +112,7 @@ export default class Street extends Phaser.Scene {
     let x = 0
     for (let i = 0; i < 4; i++) {
       const m = this.add.image(x, 470, a.mids[i % a.mids.length]).setOrigin(0, 1).setScale(0.86).setScrollFactor(0.45).setDepth(-900)
-      x += m.displayWidth - 30
+      x += m.displayWidth - (a.overlap || 30)
     }
     this.add.tileSprite(0, 452, this.W, 270, a.ground).setOrigin(0, 0).setDepth(-800)
     const stage = this.add.image(a.stage.x, 520, a.stage.key).setOrigin(0.5, 1).setScale(a.stage.scale).setDepth(-700)
@@ -121,7 +124,7 @@ export default class Street extends Phaser.Scene {
     const d = 5000
     this.habitBars = null // per level (the scene object is reused between levels)
     this.add.rectangle(0, 676, 1280, 44, 0x0b0614, 0.75).setOrigin(0, 0).setScrollFactor(0).setDepth(d)
-    this.add.image(28, 698, 'lisa_portrait').setDisplaySize(40, 40).setScrollFactor(0).setDepth(d)
+    this.add.image(28, 698, `${this.L.skin || 'lisa'}_portrait`).setDisplaySize(40, 40).setScrollFactor(0).setDepth(d)
     this.add.text(56, 686, 'LISA', { fontFamily: 'Bangers', fontSize: '24px', color: '#ff5fa2' }).setScrollFactor(0).setDepth(d)
     this.add.rectangle(112, 698, 260, 16, 0x3a1a5a).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d)
     this.hpBar = this.add.rectangle(112, 698, 260, 16, 0xff5fa2).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d)
@@ -174,6 +177,7 @@ export default class Street extends Phaser.Scene {
     const t = this.add.text(x, y, s, { fontFamily: 'Bangers', fontSize: '40px', color, stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(depth)
     this.tweens.add({ targets: t, y: y - 60, duration: 900 + hold, ease: 'Cubic.out' })
     this.tweens.add({ targets: t, alpha: 0, duration: 900, delay: hold, ease: 'Cubic.in', onComplete: () => t.destroy() })
+    return t
   }
 
   spark(x, y, color = 0xffffff) {
@@ -183,7 +187,7 @@ export default class Street extends Phaser.Scene {
 
   // ---------------------------------------------------------------- enemies
   spawn(kind, x, y) {
-    const prefix = kind === 'dealer' ? 'dealer' : kind === 'mimic' ? 'mimic' : kind === 'signal' ? 'signal' : 'grunt'
+    const prefix = kind === 'dealer' ? 'dealer' : kind === 'mimic' ? 'mimic' : kind === 'signal' ? 'signal' : kind === 'bluffer' ? 'bluffer' : 'grunt'
     const e = new Fighter(this, prefix, x, y, { hp: kind === 'grunt' ? 5 : 6 })
     Object.assign(e, { kind, st: 'free', t: 0, wait: 0.6 + Math.random() * 0.8, laneOff: Phaser.Math.Between(kind === 'dealer' ? -26 : -10, kind === 'dealer' ? 26 : 10) })
     if (kind === 'reader') {
@@ -194,6 +198,10 @@ export default class Street extends Phaser.Scene {
     if (kind === 'mimic') {
       e.shadow.setFillStyle(0xe8dcff, 0.6)
       e.tag = this.add.text(x, y - 270, 'MIMIC', { fontFamily: 'Bangers', fontSize: '22px', color: '#e8dcff', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5)
+    }
+    if (kind === 'bluffer') {
+      e.shadow.setFillStyle(0xff6b7a, 0.6)
+      e.tag = this.add.text(x, y - 270, 'BLUFFER', { fontFamily: 'Bangers', fontSize: '22px', color: '#ff8a8a', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5)
     }
     if (kind === 'signal') {
       e.shadow.setFillStyle(0xffb36b, 0.6)
@@ -370,6 +378,16 @@ export default class Street extends Phaser.Scene {
     let hit = false
     for (const e of this.alive()) {
       if (e.st === 'down' || e.st === 'held' || !this.inReach(L, e, REACH[move])) continue
+      if (e.st === 'bluff') {
+        // calling the bluff: his threat was empty, so he never swings back
+        e.tint(null)
+        if (e.shout) { e.shout.destroy(); e.shout = null }
+        if (e.tag) e.tag.setText('BLUFFER').setColor('#ff8a8a')
+        this.floatText(e.x, e.y - 300, 'CALLED IT!', '#7dffb0')
+        this.hurtEnemy(e, 3, 90, true)
+        hit = true
+        continue
+      }
       this.answer(e)
       const ex = this.exchange(move, e)
       if (ex === 'lose') { this.beaten(e); return }
@@ -408,7 +426,7 @@ export default class Street extends Phaser.Scene {
     const L = this.lisa
     const e = this.alive().filter((f) => f.st !== 'down' && f.st !== 'held' && this.inReach(L, f, REACH.throw)).sort((a, b) => Math.abs(a.x - L.x) - Math.abs(b.x - L.x))[0]
     if (!e) { L.whiff = true; return }
-    this.answer(e)
+    if (e.st === 'bluff') { e.tint(null); if (e.shout) { e.shout.destroy(); e.shout = null } if (e.tag) e.tag.setText('BLUFFER').setColor('#ff8a8a') } else this.answer(e)
     const ex = this.exchange('throw', e)
     if (ex === 'lose') { this.beaten(e); return }
     if (ex === 'clash') { L.whiff = true; this.clash(e); return }
@@ -521,7 +539,7 @@ export default class Street extends Phaser.Scene {
   updateEnemies(dt) {
     const L = this.lisa
     const alive = this.alive()
-    const attackers = alive.filter((e) => MOVES.includes(e.st)).length
+    const attackers = alive.filter((e) => MOVES.includes(e.st) || e.st === 'bluff').length
     const byDist = alive.filter((e) => e.st !== 'down').sort((a, b) => Math.abs(a.x - L.x) - Math.abs(b.x - L.x))
     for (const e of alive) {
       e.t += dt
@@ -533,6 +551,17 @@ export default class Street extends Phaser.Scene {
           if (e.moveTag) e.moveTag.destroy()
           this.tweens.add({ targets: [e.sprite, e.shadow, e.tag].filter(Boolean), alpha: 0, duration: 400, onComplete: () => { e.destroy(); e.tag && e.tag.destroy() } })
         } else if (e.hp > 0 && e.t > 1.0) { e.st = 'free'; e.t = 0; e.sprite.setAngle(0); e.setPose('idle'); e.wait = 0.6 }
+        continue
+      }
+      if (e.st === 'bluff') {
+        // nobody called it, and he was never going to swing: he backs off and gets his breath back
+        if (e.t > 1.3) {
+          e.st = 'free'; e.t = 0; e.wait = 1.8; e.tint(null)
+          if (e.tag) e.tag.setText('BLUFFER').setColor('#ff8a8a')
+          e.hp = Math.min(e.maxHp || 6, e.hp + 1)
+          this.floatText(e.x, e.y - 300, '...NEVER MIND.', '#ffff88', 4100, 300)
+          this.tweens.add({ targets: e, x: Phaser.Math.Clamp(e.x + 130 * Math.sign(e.x - L.x || 1), (this.locked ?? 0) + 60, (this.locked ?? this.W - 1280) + 1220), duration: 500 })
+        }
         continue
       }
       if (e.st === 'hurt') { if (e.t > 0.4) { e.st = 'free'; e.t = 0; e.setPose('idle'); e.wait = 0.5 + Math.random() * 0.5 } continue }
@@ -552,6 +581,12 @@ export default class Street extends Phaser.Scene {
         if (close && e.wait <= 0 && rank < 2) {
           if (attackers >= 1) { e.wait = 0.4; continue } // one attacker at a time
           if (e.kind === 'signal') { this.signalPair(e); continue }
+          if (e.kind === 'bluffer') {
+            e.st = 'bluff'; e.t = 0; e.setPose('idle'); e.tint(0xffff88)
+            if (e.tag) e.tag.setText('BLUFFING!').setColor('#ffff88')
+            e.shout = this.floatText(e.x, e.y - 330, Phaser.Utils.Array.GetRandom(['TRY IT AND YOU\'RE DONE!', 'ONE STEP AND YOU\'RE FLAT!', 'BACK OFF OR ELSE!']), '#ffff88', 4100, 1100)
+            continue
+          }
           const mv = this.pickMove(e)
           e.st = mv; e.t = 0; e.hitDone = false
           e.setPose('idle')
@@ -704,7 +739,7 @@ export default class Street extends Phaser.Scene {
 
   // ---------------------------------------------------------------- standoffs
   makeStandoff(cfg, enemy, handlers) {
-    const Cls = cfg.kind === 'mix' ? MixStandoff : cfg.kind === 'elim' ? ElimStandoff : cfg.kind === 'signal' ? SignalStandoff : Standoff
+    const Cls = cfg.kind === 'mix' ? MixStandoff : cfg.kind === 'elim' ? ElimStandoff : cfg.kind === 'signal' ? SignalStandoff : cfg.kind === 'tree' ? TreeStandoff : Standoff
     return new Cls(this, {
       lisa: this.lisa, enemy, enemyName: cfg.name, pronoun: cfg.pronoun, phases: cfg.phases,
       say: (s, y) => this.caption.show(s, y), onLose: () => this.die(), ...handlers,
@@ -724,9 +759,9 @@ export default class Street extends Phaser.Scene {
 
   // the foe's HUD bar uses the colour of the foe's numbers on the card
   foeColor(kind) {
-    const c = kind === 'elim' ? 0x7fd6ff : kind === 'signal' ? 0xffd166 : 0xff9a5c
+    const c = kind === 'elim' || kind === 'tree' ? 0x7fd6ff : kind === 'signal' ? 0xffd166 : 0xff9a5c
     this.foeBar.setFillStyle(c)
-    this.foeLabel.setColor(kind === 'elim' ? '#7fd6ff' : kind === 'signal' ? '#ffd166' : '#ff9a5c')
+    this.foeLabel.setColor(kind === 'elim' || kind === 'tree' ? '#7fd6ff' : kind === 'signal' ? '#ffd166' : '#ff9a5c')
   }
 
   // foreground props step aside while a standoff is up, so nothing stands between the fighters
@@ -913,6 +948,11 @@ export default class Street extends Phaser.Scene {
       this.tweens.add({ targets: t, alpha: { from: 1, to: 0.4 }, duration: 120, yoyo: true, repeat: 6, onComplete: () => this.tweens.add({ targets: t, alpha: 0, duration: 600, delay: 600, onComplete: () => t.destroy() }) })
       for (let k = 0; k < 4; k++) this.time.delayedCall(k * 180, () => this.spark(b.x + Phaser.Math.Between(-60, 60), b.y - Phaser.Math.Between(150, 300), 0xe8dcff))
       sfx(this, 'sting')
+    } else if (name === 'chainsSlam' && this.boss) {
+      const b = this.boss
+      b.setPose('grab')
+      this.time.delayedCall(350, () => { b.setPose('strike'); this.cam.shake(260, 0.012); sfx(this, 'hitHeavy'); this.spark(b.x - 80 * b.facing, b.y - 20, 0xffd166); this.spark(b.x - 120 * b.facing, b.y - 10, 0xffffff) })
+      this.time.delayedCall(1100, () => b.setPose('idle'))
     } else if (name === 'tempoAcross') {
       // Tempo flies off to signal from a far mast
       this.postTempo()
