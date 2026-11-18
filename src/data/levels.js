@@ -3,6 +3,7 @@
 import { BOOK_NOTES } from './games.js'
 import { BOOK_NOTES_W2 } from './mix.js'
 import { BOOK_NOTES_W3 } from './dominance.js'
+import { BOOK_NOTES_W4 } from './knowledge.js'
 
 export const LEVELS = {
   w1: {
@@ -233,6 +234,90 @@ export const LEVELS = {
     end: {
       title: 'HALL OF MIRRORS CLEARED', notes: BOOK_NOTES_W3, chapter: 'Chapter 4',
       dagger: 'The mirror card, its numbers, the mimics and the Feint move are inventions of this game. On the street triangle no move is dominated, so reason alone never shatters anything there.',
+      next: { level: 'w4', label: 'Next: Signal Tower ▶' },
+    },
+  },
+
+  w4: {
+    id: 'w4', title: 'SIGNAL TOWER', chapter: 'Chapter 5: Knowledge and Equilibrium', music: 'level_04', width: 4400, page: 4,
+    art: {
+      far: 'tower_far', mids: ['tower_mid_a'], ground: 'tower_ground',
+      stage: { key: 'tower_stage', x: 3900, scale: 0.9 },
+      fg: [['fg_dish', 900, 0.95], ['fg_dish', 1900, 0.95], ['fg_dish', 3000, 0.95], ['fg_dish', 4200, 0.95]],
+    },
+    grunt: 'signal', habitMeter: false, talkKind: 'signal', tempoAcross: true,
+    intro: [
+      { who: 'tempo', text: 'This is the Signal Tower district. Page four of the setlist blew up onto these rooftops.' },
+      { who: 'tempo', cue: 'tempoAcross', text: "Juno said somewhere high, so this must be it. I'll signal from that far mast, so watch for my green light." },
+      { who: 'zero', cue: 'zeroScreen', text: 'Welcome to my tower, my dears. Up here every plan travels by beacon, and I own the static.' },
+      { who: 'zero', text: "And as long as everyone knows the plan, that's all any partnership needs. I'd stake my whole Tour on it." },
+      { who: 'lisa', cue: 'zeroScreenOff', text: "Everyone already knows my plan. It's the one where I find Juno." },
+    ],
+    readerTalk: [
+      { who: 'tempo', text: "Signalers move in pairs and hide their wind-up. Watch the flare instead, because they'll both use the move it shows." },
+      { who: 'lisa', text: 'Everybody sees that flare, me included. So when a pair comes from one side, one move counters both.' },
+    ],
+    triggers: [
+      { id: 'wave1', x: 560, cam: 0, spawn: [['grunt', -160, 600, 0], ['signal', 1180, 630, 1.0], ['signal', 1340, 560, 1.6]] },
+      { id: 'wave2', x: 1750, cam: 1250, spawn: [['signal', 2620, 560, 0], ['signal', 2660, 630, 0.4], ['grunt', 1100, 600, 2.0], ['signal', 2700, 590, 3.4], ['signal', 1080, 560, 3.8]] },
+      { id: 'elite', x: 2800, cam: 2300, standoff: 'elite' },
+      { id: 'boss', x: 3620, cam: 4400 - 1280, standoff: 'boss' },
+    ],
+    elite: {
+      prefix: 'flicker', name: 'Flicker', label: 'FLICKER', who: 'flicker', kind: 'signal', pronoun: 'she', vanish: true,
+      phases: [{ hp: 2, cards: [{ mode: 'know', n: 6 }, { mode: 'ck', n: 6, minDepth: 2 }] }],
+      intro: [
+        { who: 'flicker', cue: 'flickerFlash', text: "Blink and you'll miss it, Lisa. I flash for Vox, and half of what I flash never reaches Tempo." },
+        { who: 'tempo', text: 'Each lamp on her card is one way tonight could go. On gold nights the plan works, and on dark nights it fails.' },
+        { who: 'tempo', text: "A pink bracket groups the nights you can't tell apart. All your brackets together are your information partition." },
+        { who: 'tempo', text: 'You only know the plan works on a night if your whole bracket around it is gold.' },
+        { who: 'tempo', text: 'So douse each gold lamp that shares your bracket with a dark one, then choose GO and strike.' },
+      ],
+      outro: [
+        { who: 'flicker', cue: 'flickerExit', text: "So you can read my lamps. Let's see how they read once Vox runs his static through them." },
+        { who: 'lisa', text: 'Knowing it myself was easy. Knowing that Tempo knows, and that he knows I know, took some work.' },
+        { who: 'tempo', text: "What survives is common knowledge. It's self-evident, because every bracket touching a lit night is all lit." },
+      ],
+    },
+    boss: {
+      prefix: 'vox', name: 'Vox', label: 'VOX STATIC', who: 'vox', kind: 'signal', pronoun: 'he', standY: 520,
+      phases: [
+        { hp: 2, cards: [{ mode: 'ck', n: 8, minDepth: 3 }] },
+        { hp: 2, cards: [{ mode: 'ck', n: 10, minDepth: 4, trap: 3, mark: true }] },
+        { hp: 2, cards: [{ mode: 'mail', n: 7 }, { mode: 'mail', n: 8, dark: true }] },
+      ],
+      phaseIntros: [
+        [
+          { who: 'vox', cue: 'voxOnAir', text: "You're live on the Static Hour! Zero pays me for every partner who charges in alone, and tonight that's you." },
+          { who: 'tempo', text: "A joint strike needs common knowledge. Douse wherever either of us doesn't know, until nothing changes." },
+        ],
+        [
+          { who: 'vox', text: "Folks, they both know the plan on almost every night! Surely that's enough for our happy couple?" },
+          { who: 'tempo', text: 'Careful, Lisa. First mark the nights we both know, and then watch how many of them still go dark.' },
+        ],
+        [
+          { who: 'vox', text: 'Let me make it easy, my friend. Flash your plan to Tempo, and every flash that lands earns a flash back.' },
+          { who: 'vox', cue: 'voxDrop', text: 'Of course my static eats the odd one. Then the line goes quiet, and nobody knows which flash was last.' },
+          { who: 'tempo', text: 'Each screen counts the flashes its own beacon sent. Pink brackets are numbers on your screen, and green ones on mine.' },
+          { who: 'tempo', text: "Most of the time the plan is off, so the first lamp is by far the likeliest. When it's off, your beacon sends nothing." },
+          { who: 'tempo', text: "That off night is the first lamp, and the ladder climbs from there. Is the plan ever common knowledge?" },
+        ],
+      ],
+      taunt: { who: 'vox', text: "Signalers, cut in! We'll be right back after this beating." },
+      interludes: [[['signal', 1400, 560, 0], ['signal', 1450, 630, 0.4]], [['signal', 1400, 560, 0], ['signal', -140, 630, 0.6], ['grunt', 1450, 600, 2]]],
+      outro: [
+        { who: 'vox', text: "However many flashes I let through, you never charged. That's terrible radio, Lisa." },
+        { who: 'tempo', text: 'Each flash that lands takes the knowing one step deeper, but nobody can tell whether the last one landed.' },
+        { who: 'lisa', text: 'So Zero was wrong. We could both know the plan, and know that we know, and still never move.' },
+        { who: 'zero', cue: 'zeroSweep', text: 'Clever, my dears. But next you meet a man with a threat, and threats always work.' },
+        { who: 'tempo', cue: 'tempoBack', text: "That's page four of the setlist! Hold it up." },
+        { who: 'juno', text: "Lisa, I saw your beacon flashing all night! They're moving me again, past a row of shops that all look alike." },
+        { who: 'tempo', text: 'The next page blew down to the Chain Store, a whole block of shops run by one very big bruiser.' },
+      ],
+    },
+    end: {
+      title: 'SIGNAL TOWER CLEARED', notes: BOOK_NOTES_W4, chapter: 'Chapter 5',
+      dagger: 'The lamps, brackets, beacons, flares and Tempo as your partner are inventions of this game. Dousing until nothing changes is the game\'s way to find the largest self-evident event among the gold nights. Striking only on common knowledge is the game\'s rule. Hold and charge stand for the book\'s A and B, and the HOLD pass retells the proof of Proposition 83.1 in words.',
       next: null,
     },
   },

@@ -4,6 +4,7 @@ import { Dialogue } from '../ui/Dialogue.js'
 import { Standoff } from '../ui/Standoff.js'
 import { MixStandoff } from '../ui/MixStandoff.js'
 import { ElimStandoff } from '../ui/ElimStandoff.js'
+import { SignalStandoff } from '../ui/SignalStandoff.js'
 import { BEATS, MOVES } from '../data/games.js'
 import { LEVELS } from '../data/levels.js'
 import { loadSave, writeSave } from '../systems/save.js'
@@ -74,6 +75,10 @@ export default class Street extends Phaser.Scene {
     this.boss = null
     this.readerTalked = false
     this.tipUp = false
+    this.tempoBusy = false
+    this.tempoPost = !!this.L.tempoAcross && this.checkpoint > 0 // posted on the far mast (W4)
+    if (this.tempoLamp) { this.tempoLamp.destroy(); this.tempoLamp = null }
+    if (this.tempoPost) this.postTempo()
 
     const cp = this.L.triggers[this.checkpoint]
     this.L.triggers.slice(0, this.checkpoint).forEach((t) => this.done.add(t.id))
@@ -165,9 +170,10 @@ export default class Street extends Phaser.Scene {
   }
 
   // ---------------------------------------------------------------- fx
-  floatText(x, y, s, color = '#fff', depth = 4100) {
+  floatText(x, y, s, color = '#fff', depth = 4100, hold = 0) {
     const t = this.add.text(x, y, s, { fontFamily: 'Bangers', fontSize: '40px', color, stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(depth)
-    this.tweens.add({ targets: t, y: y - 60, alpha: 0, duration: 900, ease: 'Cubic.out', onComplete: () => t.destroy() })
+    this.tweens.add({ targets: t, y: y - 60, duration: 900 + hold, ease: 'Cubic.out' })
+    this.tweens.add({ targets: t, alpha: 0, duration: 900, delay: hold, ease: 'Cubic.in', onComplete: () => t.destroy() })
   }
 
   spark(x, y, color = 0xffffff) {
@@ -177,7 +183,7 @@ export default class Street extends Phaser.Scene {
 
   // ---------------------------------------------------------------- enemies
   spawn(kind, x, y) {
-    const prefix = kind === 'dealer' ? 'dealer' : kind === 'mimic' ? 'mimic' : 'grunt'
+    const prefix = kind === 'dealer' ? 'dealer' : kind === 'mimic' ? 'mimic' : kind === 'signal' ? 'signal' : 'grunt'
     const e = new Fighter(this, prefix, x, y, { hp: kind === 'grunt' ? 5 : 6 })
     Object.assign(e, { kind, st: 'free', t: 0, wait: 0.6 + Math.random() * 0.8, laneOff: Phaser.Math.Between(kind === 'dealer' ? -26 : -10, kind === 'dealer' ? 26 : 10) })
     if (kind === 'reader') {
@@ -188,6 +194,10 @@ export default class Street extends Phaser.Scene {
     if (kind === 'mimic') {
       e.shadow.setFillStyle(0xe8dcff, 0.6)
       e.tag = this.add.text(x, y - 270, 'MIMIC', { fontFamily: 'Bangers', fontSize: '22px', color: '#e8dcff', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5)
+    }
+    if (kind === 'signal') {
+      e.shadow.setFillStyle(0xffb36b, 0.6)
+      e.tag = this.add.text(x, y - 270, 'SIGNALER', { fontFamily: 'Bangers', fontSize: '22px', color: '#ffb36b', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5)
     }
     e.face(x > this.lisa.x ? -1 : 1)
     this.enemies.push(e)
@@ -541,6 +551,7 @@ export default class Street extends Phaser.Scene {
         const close = onScreen && Math.abs(e.x - L.x) < 160 && Math.abs(e.y - L.y) < 22
         if (close && e.wait <= 0 && rank < 2) {
           if (attackers >= 1) { e.wait = 0.4; continue } // one attacker at a time
+          if (e.kind === 'signal') { this.signalPair(e); continue }
           const mv = this.pickMove(e)
           e.st = mv; e.t = 0; e.hitDone = false
           e.setPose('idle')
@@ -550,6 +561,17 @@ export default class Street extends Phaser.Scene {
       }
       if (MOVES.includes(e.st)) {
         // wind-up (tinted) for 0.5 s, then the move lands; a thrower steps in to reach her
+        if (!e.hitDone && e.paired && e.st !== 'throw') {
+          // the partner on the flare closes in to strike at the same moment
+          const side = Math.sign(e.x - L.x) || 1
+          // close to striking range, one lane off so the two read as separate fighters
+          let gx = L.x + side * 105
+          if (this.locked != null) gx = Phaser.Math.Clamp(gx, this.locked + 40, this.locked + 1240)
+          const gy = Phaser.Math.Clamp(L.y + (L.y > (LANE_TOP + LANE_BOT) / 2 ? -22 : 22), LANE_TOP, LANE_BOT)
+          e.face(L.x > e.x ? 1 : -1)
+          if (Math.abs(gx - e.x) > 4) e.x += Math.sign(gx - e.x) * Math.min(Math.abs(gx - e.x), 300 * dt)
+          if (Math.abs(gy - e.y) > 3) e.y += Math.sign(gy - e.y) * Math.min(Math.abs(gy - e.y), 160 * dt)
+        }
         if (!e.hitDone && e.st === 'throw') {
           const side = Math.sign(e.x - L.x) || 1
           let gx = L.x + side * 85
@@ -558,8 +580,9 @@ export default class Street extends Phaser.Scene {
           if (Math.abs(gx - e.x) > 4) e.x += Math.sign(gx - e.x) * Math.min(Math.abs(gx - e.x), 260 * dt)
         }
         e.moveTag = e.moveTag || this.add.text(0, 0, '', { fontFamily: 'Bangers', fontSize: '26px', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5)
-        const hidden = e.kind === 'mimic' // a mimic's wind-up shows no move: you predict it from your own last one
-        e.moveTag.setText(e.hitDone ? '' : hidden ? 'MIRROR...' : e.st.toUpperCase()).setColor(hidden ? '#e8dcff' : TINT_CSS[e.st]).setPosition(e.x, e.y - (hidden ? 330 : 300)).setDepth(2950)
+        const hidden = e.kind === 'mimic' || e.kind === 'signal' // mimics: predict from your last move; signalers: read the flare
+        const tag = e.kind === 'mimic' ? 'MIRROR...' : e.alone ? 'GUESS...' : '...'
+        e.moveTag.setText(e.hitDone ? '' : hidden ? tag : e.st.toUpperCase()).setColor(hidden ? (e.kind === 'signal' ? '#ffb36b' : '#e8dcff') : TINT_CSS[e.st]).setPosition(e.x, e.y - (hidden ? 330 : 300)).setDepth(2950)
         if (!e.hitDone && e.t > 0.5) {
           e.hitDone = true; e.setPose(e.st); e.tint(null)
           sfx(this, e.st === 'punch' ? 'whoosh' : 'whooshBig')
@@ -574,9 +597,39 @@ export default class Street extends Phaser.Scene {
             }
           }
         }
-        if (MOVES.includes(e.st) && e.t > 0.95) { e.st = 'free'; e.t = 0; e.setPose('idle'); e.wait = 0.7 + Math.random() * 0.7 }
+        if (MOVES.includes(e.st) && e.t > 0.95) { e.st = 'free'; e.t = 0; e.paired = false; e.alone = false; e.setPose('idle'); e.wait = 0.7 + Math.random() * 0.7 }
       }
     }
+  }
+
+  // A signaler waits for his partner. When both are free, a flare goes up over them showing one move, and both
+  // use it. Everyone sees the flare, so all three know the move, and know that the others know it (†).
+  signalPair(e) {
+    // the partner must be on her same side, so one move really can answer both
+    const side = Math.sign(e.x - this.lisa.x) || 1
+    const mate = this.alive().find((f) => f !== e && f.kind === 'signal' && f.st === 'free' && (Math.sign(f.x - this.lisa.x) || 1) === side && (this.locked == null || (f.x > this.locked + 40 && f.x < this.locked + 1240)))
+    if (!mate) {
+      e.waits = (e.waits || 0) + 1
+      if (e.waits >= 3) {
+        // no partner comes: he gives up waiting and guesses alone, with no flare to read
+        e.waits = 0
+        const mv = Phaser.Utils.Array.GetRandom(MOVES)
+        e.st = mv; e.t = 0; e.hitDone = false; e.alone = true; e.setPose('idle'); e.tint(0xffb36b)
+        return
+      }
+      e.wait = 1.4
+      if (!e.lastWait || this.elapsed - e.lastWait > 4) { e.lastWait = this.elapsed; this.floatText(e.x, e.y - 320, 'NO SIGNAL', '#ffb36b', 4100, 300) }
+      return
+    }
+    e.waits = 0
+    const mv = Phaser.Utils.Array.GetRandom(MOVES)
+    for (const f of [e, mate]) { f.st = mv; f.t = -0.25; f.hitDone = false; f.paired = f === mate; f.setPose('idle'); f.tint(0xffb36b) }
+    const fx = (e.x + mate.x) / 2, fy = Math.min(e.y, mate.y) - 380
+    const flare = this.add.star(fx, fy + 120, 6, 8, 22, MOVE_COLOR[mv]).setDepth(2960)
+    this.tweens.add({ targets: flare, y: fy, scale: 1.8, duration: 300, ease: 'Cubic.out' })
+    this.tweens.add({ targets: flare, alpha: 0, duration: 400, delay: 700, onComplete: () => flare.destroy() })
+    this.floatText(fx, fy - 30, `${mv.toUpperCase()} FLARE!`, TINT_CSS[mv], 4100, 900)
+    sfx(this, 'go')
   }
 
   // ---------------------------------------------------------------- triggers
@@ -651,7 +704,7 @@ export default class Street extends Phaser.Scene {
 
   // ---------------------------------------------------------------- standoffs
   makeStandoff(cfg, enemy, handlers) {
-    const Cls = cfg.kind === 'mix' ? MixStandoff : cfg.kind === 'elim' ? ElimStandoff : Standoff
+    const Cls = cfg.kind === 'mix' ? MixStandoff : cfg.kind === 'elim' ? ElimStandoff : cfg.kind === 'signal' ? SignalStandoff : Standoff
     return new Cls(this, {
       lisa: this.lisa, enemy, enemyName: cfg.name, pronoun: cfg.pronoun, phases: cfg.phases,
       say: (s, y) => this.caption.show(s, y), onLose: () => this.die(), ...handlers,
@@ -671,9 +724,9 @@ export default class Street extends Phaser.Scene {
 
   // the foe's HUD bar uses the colour of the foe's numbers on the card
   foeColor(kind) {
-    const c = kind === 'elim' ? 0x7fd6ff : 0xff9a5c
+    const c = kind === 'elim' ? 0x7fd6ff : kind === 'signal' ? 0xffd166 : 0xff9a5c
     this.foeBar.setFillStyle(c)
-    this.foeLabel.setColor(kind === 'elim' ? '#7fd6ff' : '#ff9a5c')
+    this.foeLabel.setColor(kind === 'elim' ? '#7fd6ff' : kind === 'signal' ? '#ffd166' : '#ff9a5c')
   }
 
   // foreground props step aside while a standoff is up, so nothing stands between the fighters
@@ -847,6 +900,48 @@ export default class Street extends Phaser.Scene {
       this.time.delayedCall(1300, () => { sfx(this, 'block'); this.spark(b.x, b.y - 170, 0xe8dcff) })
       this.tweens.add({ targets: [b.sprite, b.shadow], scaleX: 0.01, alpha: 0, duration: 500, delay: 1350 })
       this.tweens.add({ targets: b, x: b.x + 120, y: b.y - 40, duration: 500, delay: 1350 })
+    } else if (name === 'flickerFlash' && this.boss) {
+      // three quick flashes from her shuttered lamp
+      const b = this.boss
+      b.setPose('strike')
+      for (let k = 0; k < 3; k++) this.time.delayedCall(250 + k * 330, () => { this.spark(b.x - 60 * b.facing, b.y - 230, 0xffd166); sfx(this, 'hover') })
+      this.time.delayedCall(1300, () => b.setPose('idle'))
+    } else if (name === 'voxOnAir' && this.boss) {
+      // the ON AIR lamp: a crackle of static around him
+      const b = this.boss
+      const t = this.add.text(b.x, b.y - 330, 'ON AIR', { fontFamily: 'Bangers', fontSize: '34px', color: '#ff6b7a', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setDepth(2960)
+      this.tweens.add({ targets: t, alpha: { from: 1, to: 0.4 }, duration: 120, yoyo: true, repeat: 6, onComplete: () => this.tweens.add({ targets: t, alpha: 0, duration: 600, delay: 600, onComplete: () => t.destroy() }) })
+      for (let k = 0; k < 4; k++) this.time.delayedCall(k * 180, () => this.spark(b.x + Phaser.Math.Between(-60, 60), b.y - Phaser.Math.Between(150, 300), 0xe8dcff))
+      sfx(this, 'sting')
+    } else if (name === 'tempoAcross') {
+      // Tempo flies off to signal from a far mast
+      this.postTempo()
+    } else if (name === 'tempoBack') {
+      this.tempoPost = false
+      if (this.tempoLamp) { this.tempoLamp.destroy(); this.tempoLamp = null }
+    } else if (name === 'flickerExit' && this.boss) {
+      // one last flash, and she's gone
+      const b = this.boss
+      this.foeLabel.setText('')
+      this.spark(b.x - 60 * b.facing, b.y - 230, 0xffd166)
+      sfx(this, 'hover')
+      this.cam.flash(180, 255, 230, 160)
+      this.tweens.add({ targets: [b.sprite, b.shadow], alpha: 0, duration: 300, delay: 120 })
+    } else if (name === 'voxDrop') {
+      // three flashes cross toward Tempo's mast, and the static eats the third
+      const L = this.lisa
+      const tx = this.cam.scrollX + 1160, ty = 230
+      for (let k = 0; k < 3; k++) {
+        this.time.delayedCall(k * 520, () => {
+          const f = this.add.star(L.x + 30, L.y - 300, 5, 6, 16, 0xffd166).setDepth(2960)
+          const lost = k === 2
+          this.tweens.add({ targets: f, x: lost ? (L.x + tx) / 2 : tx, y: lost ? 260 : ty, duration: 420, onComplete: () => {
+            if (lost) { this.floatText(f.x, f.y - 20, 'STATIC', '#e8dcff', 4100, 400); this.spark(f.x, f.y, 0xe8dcff); sfx(this, 'block') }
+            f.destroy()
+          } })
+          sfx(this, 'hover')
+        })
+      }
     } else if (name === 'zeroSweep') {
       // a ghostly Zero steps out, sweeps the table, and fades
       const z = this.add.image(cx + 260, 600, 'zero_idle').setOrigin(0.5, 1).setScale(0.5).setAlpha(0).setFlipX(true).setDepth(3500)
@@ -854,6 +949,14 @@ export default class Street extends Phaser.Scene {
       if (this.boss) this.tweens.add({ targets: [this.boss.sprite, this.boss.shadow], alpha: 0, duration: 900, delay: 700 }) // he sweeps the loser away
       this.tweens.add({ targets: z, alpha: 0, duration: 700, delay: 2600, onComplete: () => z.destroy() })
       sfx(this, 'sting')
+    }
+  }
+
+  postTempo() {
+    this.tempoPost = true
+    if (!this.tempoLamp) {
+      this.tempoLamp = this.add.circle(0, 0, 9, 0x7dffb0).setDepth(2901)
+      this.tweens.add({ targets: this.tempoLamp, alpha: 0.35, duration: 500, yoyo: true, repeat: -1 })
     }
   }
 
@@ -878,9 +981,14 @@ export default class Street extends Phaser.Scene {
     if (L.invuln > 0 && L.st !== 'flip') L.sprite.setAlpha(Math.sin(this.elapsed * 40) > 0 ? 1 : 0.4); else L.sprite.setAlpha(1)
     this.enemies.forEach((e) => e.st !== 'dead' && e.sync(dt))
     if (this.boss) this.boss.sync(dt)
-    const tx = L.x - 80 * L.facing, ty = L.y - 300 + Math.sin(this.elapsed * 3) * 8
-    this.tempo.x = Phaser.Math.Linear(this.tempo.x, tx, 0.08)
-    this.tempo.y = Phaser.Math.Linear(this.tempo.y, ty, 0.08)
+    const posted = this.tempoPost && !this.tempoBusy
+    const tx = posted ? this.cam.scrollX + 1160 : L.x - 80 * L.facing
+    const ty = (posted ? 210 : L.y - 300) + Math.sin(this.elapsed * 3) * 8
+    if (!this.tempoBusy) {
+      this.tempo.x = Phaser.Math.Linear(this.tempo.x, tx, 0.08)
+      this.tempo.y = Phaser.Math.Linear(this.tempo.y, ty, 0.08)
+    }
+    if (this.tempoLamp) this.tempoLamp.setPosition(this.tempo.x - 34, this.tempo.y + 10).setVisible(this.tempoPost && !this.tempoBusy)
     // hud
     this.hpBar.setScale(Math.max(0, L.hp / L.maxHp), 1)
     const foe = this.boss && this.so && this.so.active ? this.so : null

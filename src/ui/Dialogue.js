@@ -13,6 +13,8 @@ const WHO = {
   lou: { name: 'LUCKY LOU', key: 'lou_portrait', side: 'right', color: '#ff6b7a' },
   echo: { name: 'ECHO', key: 'echo_portrait', side: 'right', color: '#e8dcff' },
   mira: { name: 'MIRA GLASS', key: 'mira_portrait', side: 'right', color: '#c79bff' },
+  flicker: { name: 'FLICKER', key: 'flicker_portrait', side: 'right', color: '#ffd166' },
+  vox: { name: 'VOX STATIC', key: 'vox_portrait', side: 'right', color: '#ff9ad5' },
   dealer: { name: 'DEALER', key: 'dealer_idle', side: 'right', color: '#ff9a5c' },
 }
 
