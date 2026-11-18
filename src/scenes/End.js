@@ -19,12 +19,12 @@ export default class End extends Phaser.Scene {
     this.add.text(640, 122, `Setlist page ${L.page} of 12 recovered`, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '24px', color: '#fff' }).setOrigin(0.5)
     this.add.text(150, 168, 'WHAT YOU USED, FROM THE BOOK', { fontFamily: 'Bangers', fontSize: '30px', color: '#ff5fa2' })
     E.notes.forEach(([idea, ref], i) => {
-      const y = 208 + i * 36
-      this.add.text(150, y, idea, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '20px', color: '#ffffff' })
+      const y = 208 + i * (E.notes.length > 8 ? 33 : 36)
+      this.add.text(150, y, idea, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '19px', color: '#ffffff', fixedWidth: 660 })
       this.add.text(1130, y, ref, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '18px', color: '#b9a6e0' }).setOrigin(1, 0)
     })
     this.add.text(640, 528, `† ${E.dagger}\nThe ideas they illustrate are the book's: Osborne & Rubinstein, A Course in Game Theory (MIT Press, 1994), ${E.chapter}.`, {
-      fontFamily: 'Nunito', fontStyle: '800', fontSize: '16px', color: '#b9a6e0', align: 'center', wordWrap: { width: 1150 },
+      fontFamily: 'Nunito', fontStyle: '800', fontSize: '18px', color: '#c9b8ec', align: 'center', wordWrap: { width: 1150 },
     }).setOrigin(0.5)
     const btn = (x, label, go) => {
       const b = this.add.text(x, 640, label, { fontFamily: 'Bangers', fontSize: '32px', color: '#fff', backgroundColor: '#2a0f4a', padding: { x: 18, y: 8 } })
@@ -42,11 +42,12 @@ export default class End extends Phaser.Scene {
       btn(1030, 'Title', () => this.scene.start('Title'))
       this.input.keyboard.once('keydown-ENTER', () => { sfx(this, 'select'); this.scene.start('Street', { level: E.next.level, checkpoint: 0 }) })
     } else {
-      this.add.text(640, 580, 'End of the game so far. Next stop: the Hall of Mirrors (Chapter 4).', {
+      this.add.text(640, 580, "That's as far as the Tour goes for now. More worlds are on the way.", {
         fontFamily: 'Nunito', fontStyle: '800', fontSize: '20px', color: '#ffd166',
       }).setOrigin(0.5)
       btn(470, `Replay ${L.title}`, () => this.scene.start('Street', { level: L.id, checkpoint: 0 }))
       btn(820, 'Title', () => this.scene.start('Title'))
+      this.input.keyboard.once('keydown-ENTER', () => { sfx(this, 'select'); this.scene.start('Title') })
     }
   }
 }

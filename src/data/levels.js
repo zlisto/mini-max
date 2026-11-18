@@ -2,6 +2,7 @@
 // Book refs live in the standoff classes and the end-screen notes; dialogue stays short and in character.
 import { BOOK_NOTES } from './games.js'
 import { BOOK_NOTES_W2 } from './mix.js'
+import { BOOK_NOTES_W3 } from './dominance.js'
 
 export const LEVELS = {
   w1: {
@@ -151,6 +152,87 @@ export const LEVELS = {
     end: {
       title: 'CASINO ARCADE CLEARED', notes: BOOK_NOTES_W2, chapter: 'Chapter 3',
       dagger: "The wheel, the 12 slices, the power-ups and the card numbers are inventions of this game, not from the book. Card numbers are each table's stakes and can differ from the street's Punch/Kick/Throw rules.",
+      next: { level: 'w3', label: 'Next: Hall of Mirrors ▶' },
+    },
+  },
+
+  w3: {
+    id: 'w3', title: 'HALL OF MIRRORS', chapter: 'Chapter 4: Rationalizability', music: 'level_03', width: 4400, page: 3,
+    art: {
+      far: 'hall_far', mids: ['hall_mid_a', 'hall_mid_b'], ground: 'hall_ground',
+      stage: { key: 'hall_stage', x: 3900, scale: 0.9, tint: 0xd8c4ff },
+      fg: [['fg_mirror', 900, 0.55, 0.45], ['fg_shards', 1560, 0.95], ['fg_mirror', 2300, 0.55, 0.45], ['fg_shards', 3000, 0.95], ['fg_shards', 3600, 0.95], ['fg_mirror', 4300, 0.55, 0.45]],
+    },
+    grunt: 'mimic', habitMeter: false, talkKind: 'mimic',
+    intro: [
+      { who: 'tempo', text: 'This is the Hall of Mirrors. The third page of the setlist drifted in here, somewhere past all that glass.' },
+      { who: 'zero', cue: 'zeroScreen', text: 'Look around, my dears. Every face in here belongs to a stranger, and not one will tell you what it plans to do.' },
+      { who: 'zero', text: "You can never predict a rival. In Mira's hall all you can do is guess, and guessers don't last long." },
+      { who: 'lisa', cue: 'zeroScreenOff', text: "Funny, because I've been reading people since the Neon Strip." },
+    ],
+    readerTalk: [
+      { who: 'tempo', text: "There's a mimic! He's about to copy your last move, so use the move that counters it." },
+      { who: 'lisa', text: 'So if I remember my last move, I know his, and I hit back with whatever counters it.' },
+    ],
+    triggers: [
+      { id: 'wave1', x: 560, cam: 0, spawn: [['grunt', 1420, 560, 0], ['mimic', 1180, 630, 1.0], ['grunt', -160, 600, 2.4]] },
+      { id: 'wave2', x: 1750, cam: 1250, spawn: [['mimic', 2620, 560, 0], ['mimic', 2660, 630, 0.8], ['grunt', 1100, 600, 2.0], ['mimic', 2700, 590, 3.4]] },
+      { id: 'elite', x: 2800, cam: 2300, standoff: 'elite' },
+      { id: 'boss', x: 3620, cam: 4400 - 1280, standoff: 'boss' },
+    ],
+    elite: {
+      prefix: 'echo', name: 'Echo', label: 'ECHO', who: 'echo', kind: 'elim', pronoun: 'he', vanish: true,
+      phases: [{ hp: 2, size: 3 }],
+      intro: [
+        { who: 'echo', cue: 'echoMime', text: "(Echo mimes a box around Lisa, taps his temple, and points at a card that isn't there.)" },
+        { who: 'tempo', text: "Echo won't say a word, but his card says plenty. Pink numbers are your points, and blue ones are his." },
+        { who: 'tempo', text: 'Look along your rows. A move that scores less than another in every column is called strictly dominated.' },
+        { who: 'tempo', text: 'No guess about Echo can make that move your best choice, so shatter it.' },
+        { who: 'tempo', text: 'For his moves, compare his blue numbers down each column. A rational Echo never plays a strictly dominated move either.' },
+        { who: 'tempo', text: 'Every move you shatter shrinks the card and can expose another. Keep going until only one cell is left.' },
+      ],
+      outro: [
+        { who: 'echo', cue: 'echoExit', text: '(Echo bows low, mimes a mirror cracking, and slips away into the glass.)' },
+        { who: 'lisa', text: 'Instead of guessing, I ruled out what a rational fighter would never play, and his last move was all that was left.' },
+        { who: 'tempo', text: "Shatter only moves that lose everywhere, and the order never matters. You'd have landed on the same cell either way." },
+        { who: 'tempo', text: "The moves left standing are the rationalizable ones, each a best answer to some guess about the rival's remaining moves." },
+        { who: 'lisa', text: "So if they're thinking straight, I can read them." },
+      ],
+    },
+    boss: {
+      prefix: 'mira', name: 'Mira', label: 'MIRA GLASS', who: 'mira', kind: 'elim', pronoun: 'she', standY: 520,
+      phases: [{ hp: 2, size: 3, colFirst: true }, { hp: 2, size: 3, mix: true }, { hp: 2, size: 4, weak: true }],
+      phaseIntros: [
+        [
+          { who: 'mira', text: 'Zero promised me this hall for keeps if you lose, darling. Every mirror shows a different rival, and every one is me.' },
+          { who: 'tempo', text: "None of your moves can be shattered yet, so start with her side of the card and see what she'd never do." },
+        ],
+        [
+          { who: 'mira', text: "One of your moves can't be outscored by any single other move of yours. Let's see you manage that." },
+          { who: 'tempo', text: 'Sometimes a mix of two moves outscores a move that neither one outscores alone. Try half of each.' },
+          { who: 'tempo', text: 'Average their points in each column. If the average outscores the third move against all she has left, shatter it.' },
+        ],
+        [
+          { who: 'mira', text: 'Four moves each now, darling, and one of my mirrors is lying to you.' },
+          { who: 'tempo', text: "Watch for ties. If another move only ties yours somewhere, that weak kind of domination isn't enough to shatter it." },
+          { who: 'tempo', text: "If nothing outscores a tied move everywhere, it's still a best answer to some guess about her, so you can't rule it out." },
+        ],
+      ],
+      taunt: { who: 'mira', text: 'Mimics, show her what she looks like from the outside.' },
+      interludes: [[['mimic', 1400, 560, 0], ['mimic', -140, 630, 0.6]], [['mimic', 1400, 560, 0], ['grunt', -140, 630, 0.6], ['mimic', 1450, 600, 2]]],
+      outro: [
+        { who: 'mira', text: 'You looked past every reflection, darling, and found my last move. Zero will want his hall back.' },
+        { who: 'tempo', text: "Not every card cracks like that. On the street no move, and no mix, outscores another, so reason alone can't call it." },
+        { who: 'lisa', text: 'Maybe not on the street. But Zero said I could never predict a rival, and a rational one gave herself away.' },
+        { who: 'zero', cue: 'zeroSweep', text: "You read one rival, my dears. Next you'll need a partner, and as long as everyone knows the plan, that will be enough." },
+        { who: 'tempo', text: "That's page three of the setlist! Hold it up." },
+        { who: 'juno', text: "Lisa, I saw you in every mirror at once! They're taking me somewhere high, all lights and signals." },
+        { who: 'tempo', text: 'The next page flew up to the Signal Tower, the tallest thing in the city.' },
+      ],
+    },
+    end: {
+      title: 'HALL OF MIRRORS CLEARED', notes: BOOK_NOTES_W3, chapter: 'Chapter 4',
+      dagger: 'The mirror card, its numbers, the mimics and the Feint move are inventions of this game. On the street triangle no move is dominated, so reason alone never shatters anything there.',
       next: null,
     },
   },

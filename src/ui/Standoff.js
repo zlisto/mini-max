@@ -73,6 +73,7 @@ export class Standoff {
     })
     this.timerBar = s.add.rectangle(X + 20, Y + H - 20, W - 40, 8, 0xff5fa2).setOrigin(0, 0.5)
     this.c.add(this.timerBar)
+    this.c.each((o) => o.setScrollFactor && o.setScrollFactor(0)) // clickable on a scrolled camera
   }
 
   paintCell(r, c, hot = false) {

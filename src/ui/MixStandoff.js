@@ -136,6 +136,7 @@ export class MixStandoff {
     this.c.add(txt(PX + 410, PY + PH - 13, hint, { fontSize: '13px', color: '#b9a6e0' }))
     this.timerBar = s.add.rectangle(PX + 20, PY + PH - 3, PW - 40, 5, 0xff5fa2).setOrigin(0, 0.5)
     this.c.add(this.timerBar)
+    this.c.each((o) => o.setScrollFactor && o.setScrollFactor(0)) // clickable on a scrolled camera
     this.refresh()
   }
 

@@ -27,30 +27,41 @@ export default class Title extends Phaser.Scene {
     const start = this.add.text(640, 430, label, { fontFamily: 'Bangers', fontSize: '44px', color: '#fff' }).setOrigin(0.5)
     this.tweens.add({ targets: start, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 })
 
+    // Level select, built from the level data: pick a world (←/→ or click), then where to start (1/2/3 or click)
     const go = (level, checkpoint) => () => this.scene.start('Street', { level, checkpoint })
-    const menu = [
-      ['Prologue', () => this.scene.start('Prologue')],
-      ['W1 Neon Strip', go('w1', 0)],
-      ['W1 Brick', go('w1', 2)],
-      ['W1 Sadie', go('w1', 3)],
-      ['W2 Casino', go('w2', 0)],
-      ['W2 Penny', go('w2', 2)],
-      ['W2 Lou', go('w2', 3)],
-    ]
-    const KEYS = ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN']
-    this.add.text(640, 498, 'LEVEL SELECT', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '16px', color: '#b9a6e0' }).setOrigin(0.5)
-    menu.forEach(([label, go], i) => {
-      const row = i < 4 ? 0 : 1
-      const col = row === 0 ? i : i - 4
-      const x = row === 0 ? 640 + (col - 1.5) * 225 : 640 + (col - 1) * 225
-      const b = this.add.text(x, 530 + row * 48, `${i + 1}  ${label}`, {
-        fontFamily: 'Nunito', fontStyle: '800', fontSize: '19px', color: '#fff', backgroundColor: '#2a0f4acc', padding: { x: 12, y: 7 },
-      }).setOrigin(0.5).setInteractive({ useHandCursor: true })
-      b.on('pointerdown', () => { sfx(this, 'select'); go() })
-      b.on('pointerover', () => { b.setColor('#ffd166'); sfx(this, 'hover') })
-      b.on('pointerout', () => b.setColor('#fff'))
-      this.input.keyboard.on(`keydown-${KEYS[i]}`, () => { sfx(this, 'select'); go() })
+    const worlds = [{ id: 'pro', label: 'Prologue', entries: [['Prologue', () => this.scene.start('Prologue')]] }]
+    Object.values(LEVELS).forEach((L, n) => {
+      const idx = (k) => L.triggers.findIndex((t) => t.standoff === k)
+      worlds.push({ id: L.id, label: `W${n + 1}`, entries: [[L.title, go(L.id, 0)], [L.elite.label, go(L.id, idx('elite'))], [L.boss.label, go(L.id, idx('boss'))]] })
     })
+    let sel = Math.max(0, worlds.findIndex((w) => w.id === save.level))
+    this.add.text(640, 494, 'LEVEL SELECT   ←/→ world   1/2/3 start', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '16px', color: '#b9a6e0' }).setOrigin(0.5)
+    const tabs = worlds.map((w, i) => {
+      const x = 640 + (i - (worlds.length - 1) / 2) * Math.min(96, 1180 / worlds.length)
+      const b = this.add.text(x, 526, w.label, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '17px', color: '#fff', backgroundColor: '#2a0f4acc', padding: { x: 9, y: 5 } })
+        .setOrigin(0.5).setInteractive({ useHandCursor: true })
+      b.on('pointerdown', () => { sel = i; sfx(this, 'hover'); paint() })
+      return b
+    })
+    const entryBtns = []
+    const paint = () => {
+      tabs.forEach((b, i) => b.setColor(i === sel ? '#ffd166' : '#fff').setBackgroundColor(i === sel ? '#5a2a8acc' : '#2a0f4acc'))
+      entryBtns.forEach((b) => b.destroy()); entryBtns.length = 0
+      const E = worlds[sel].entries
+      E.forEach(([label, fn], k) => {
+        const x = 640 + (k - (E.length - 1) / 2) * 300
+        const b = this.add.text(x, 578, `${k + 1}  ${label}`, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '19px', color: '#fff', backgroundColor: '#2a0f4acc', padding: { x: 12, y: 7 } })
+          .setOrigin(0.5).setInteractive({ useHandCursor: true })
+        b.on('pointerdown', () => { sfx(this, 'select'); fn() })
+        b.on('pointerover', () => { b.setColor('#ffd166'); sfx(this, 'hover') })
+        b.on('pointerout', () => b.setColor('#fff'))
+        entryBtns.push(b)
+      })
+    }
+    paint()
+    this.input.keyboard.on('keydown-LEFT', () => { sel = (sel - 1 + worlds.length) % worlds.length; sfx(this, 'hover'); paint() })
+    this.input.keyboard.on('keydown-RIGHT', () => { sel = (sel + 1) % worlds.length; sfx(this, 'hover'); paint() })
+    ;['ONE', 'TWO', 'THREE'].forEach((K, k) => this.input.keyboard.on(`keydown-${K}`, () => { const e = worlds[sel].entries[k]; if (e) { sfx(this, 'select'); e[1]() } }))
     this.input.keyboard.once('keydown-ENTER', () => {
       sfx(this, 'select')
       if (canContinue) this.scene.start('Street', { level: save.level, checkpoint: save.checkpoint || 0, bossPhase: save.bossPhase || 0 })

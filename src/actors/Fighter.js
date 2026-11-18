@@ -60,7 +60,7 @@ export class Fighter {
     this.bob += dt * 5
     const breathe = this.pose === 'idle' && this.state === 'free' ? Math.sin(this.bob) * 0.008 : 0
     this.sprite.setPosition(this.x, this.y - this.lift)
-    this.sprite.setScale(SPRITE_SCALE * (1 - breathe * 0.5), SPRITE_SCALE * (1 + breathe))
+    if (!this.holdScale) this.sprite.setScale(SPRITE_SCALE * (1 - breathe * 0.5), SPRITE_SCALE * (1 + breathe))
     this.sprite.setDepth(this.y)
     this.shadow.setPosition(this.x, this.y).setDepth(this.y - 1)
   }

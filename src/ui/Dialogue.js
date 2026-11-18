@@ -11,6 +11,8 @@ const WHO = {
   grunt: { name: 'GRUNT', key: 'grunt_idle', side: 'right', color: '#cccccc' },
   penny: { name: 'PENNY ANTE', key: 'penny_portrait', side: 'right', color: '#ffd166' },
   lou: { name: 'LUCKY LOU', key: 'lou_portrait', side: 'right', color: '#ff6b7a' },
+  echo: { name: 'ECHO', key: 'echo_portrait', side: 'right', color: '#e8dcff' },
+  mira: { name: 'MIRA GLASS', key: 'mira_portrait', side: 'right', color: '#c79bff' },
   dealer: { name: 'DEALER', key: 'dealer_idle', side: 'right', color: '#ff9a5c' },
 }
 
@@ -51,7 +53,7 @@ export class Dialogue {
     if (!line) { this.close(); return }
     if (line.do) line.do()
     const who = WHO[line.who]
-    this.voice = VOICE[line.who] || 0.9
+    this.voice = VOICE[line.who] ?? 0.9 // 0 = silent (the mime)
     const hasP = who && this.scene.textures.exists(who.key)
     this.portrait.setVisible(!!hasP)
     let tx = 44
@@ -95,10 +97,10 @@ export class Dialogue {
       const now = Math.floor(this.shown)
       this.text.setText(this.full.slice(0, now))
       // a blip every third letter, pitched to the speaker
-      if (Math.floor(now / 3) > Math.floor(before / 3) && /\S/.test(this.full[now - 1] || '')) sfx(this.scene, 'blip', this.voice)
+      if (Math.floor(now / 3) > Math.floor(before / 3) && this.voice > 0 && /\S/.test(this.full[now - 1] || '')) sfx(this.scene, 'blip', this.voice)
     }
     const p = this.scene.presses
-    if (p && p.take('Space', 'Enter', 'KeyJ', 'KeyZ')) this.advance()
+    if (p && p.take('Space', 'Enter')) this.advance() // not the attack keys: mashing J mid-fight mustn't skip a lesson
   }
 
   destroy() { this.scene.input.off('pointerdown', this._onPointer) }
