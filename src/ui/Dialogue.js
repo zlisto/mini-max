@@ -17,6 +17,8 @@ const WHO = {
   vox: { name: 'VOX STATIC', key: 'vox_portrait', side: 'right', color: '#ff9ad5' },
   bluster: { name: 'BLUSTER', key: 'bluster_portrait', side: 'right', color: '#ffd166' },
   chains: { name: 'MR. CHAINSWORTH', key: 'chains_portrait', side: 'right', color: '#ff8a8a' },
+  hank: { name: 'HANK HOLDOUT', key: 'hank_portrait', side: 'right', color: '#e8c08a' },
+  ledger: { name: 'LADY LEDGER', key: 'ledger_portrait', side: 'right', color: '#7dffb0' },
   dealer: { name: 'DEALER', key: 'dealer_idle', side: 'right', color: '#ff9a5c' },
 }
 

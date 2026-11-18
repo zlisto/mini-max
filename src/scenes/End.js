@@ -23,9 +23,10 @@ export default class End extends Phaser.Scene {
       this.add.text(150, y, idea, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '19px', color: '#ffffff', fixedWidth: 660 })
       this.add.text(1130, y, ref, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '18px', color: '#b9a6e0' }).setOrigin(1, 0)
     })
-    this.add.text(640, 528, `† ${E.dagger}\nThe ideas they illustrate are the book's: Osborne & Rubinstein, A Course in Game Theory (MIT Press, 1994), ${E.chapter}.`, {
+    const gap = E.notes.length > 8 ? 33 : 36
+    const dag = this.add.text(640, 208 + E.notes.length * gap + 12, `† ${E.dagger}\nThe ideas they illustrate are the book's: Osborne & Rubinstein, A Course in Game Theory (MIT Press, 1994), ${E.chapter}.`, {
       fontFamily: 'Nunito', fontStyle: '800', fontSize: '18px', color: '#c9b8ec', align: 'center', wordWrap: { width: 1150 },
-    }).setOrigin(0.5)
+    }).setOrigin(0.5, 0)
     const btn = (x, label, go) => {
       const b = this.add.text(x, 640, label, { fontFamily: 'Bangers', fontSize: '32px', color: '#fff', backgroundColor: '#2a0f4a', padding: { x: 18, y: 8 } })
         .setOrigin(0.5).setInteractive({ useHandCursor: true })
@@ -42,7 +43,7 @@ export default class End extends Phaser.Scene {
       btn(1030, 'Title', () => this.scene.start('Title'))
       this.input.keyboard.once('keydown-ENTER', () => { sfx(this, 'select'); this.scene.start('Street', { level: E.next.level, checkpoint: 0 }) })
     } else {
-      this.add.text(640, 580, "That's as far as the Tour goes for now. More worlds are on the way.", {
+      this.add.text(640, Math.max(580, dag.y + dag.height + 16), "That's as far as the Tour goes for now. More worlds are on the way.", {
         fontFamily: 'Nunito', fontStyle: '800', fontSize: '20px', color: '#ffd166',
       }).setOrigin(0.5)
       btn(470, `Replay ${L.title}`, () => this.scene.start('Street', { level: L.id, checkpoint: 0 }))

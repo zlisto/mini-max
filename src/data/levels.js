@@ -5,6 +5,7 @@ import { BOOK_NOTES_W2 } from './mix.js'
 import { BOOK_NOTES_W3 } from './dominance.js'
 import { BOOK_NOTES_W4 } from './knowledge.js'
 import { BOOK_NOTES_W5 } from './trees.js'
+import { BOOK_NOTES_W6 } from './bargain.js'
 
 export const LEVELS = {
   w1: {
@@ -403,6 +404,88 @@ export const LEVELS = {
     end: {
       title: 'CHAIN STORE CLEARED', notes: BOOK_NOTES_W5, chapter: 'Chapter 6',
       dagger: "The trees, their numbers, the bluffers, the move names and Lisa playing every shop were made up for this game. Fold is the book's C. The cash ladder is Figure 107.1 with a constant added, and the towns keep Figure 105.1's orderings.",
+      next: { level: 'w6', label: 'Next: The Money Rain ▶' },
+    },
+  },
+
+  w6: {
+    id: 'w6', title: 'THE MONEY RAIN', chapter: 'Chapter 7: Bargaining Games', music: 'level_06', width: 4400, page: 6, skin: 'lisag',
+    art: {
+      far: 'rain_far', mids: [], ground: 'rain_ground',
+      stage: { key: 'rain_stage', x: 3900, scale: 0.9 },
+      fg: [['fg_cash', 900, 0.9], ['fg_umbrella', 1900, 0.9], ['fg_cash', 3000, 0.9], ['fg_umbrella', 4200, 0.9]],
+    },
+    grunt: 'holdout', habitMeter: false, talkKind: 'holdout', windOrbs: true,
+    intro: [
+      { who: 'tempo', text: "It's raining money, just like Juno said, and the wind takes it as fast as it falls. Page six is in this storm." },
+      { who: 'zero', cue: 'zeroScreen', text: 'Welcome to the Money Rain, my dears. Lady Ledger runs every deal here, and she has never once blinked.' },
+      { who: 'zero', text: 'Whoever holds out longest wins, and whoever flinches first gets the crumbs.' },
+      { who: 'lisa', cue: 'zeroScreenOff', text: "The funny thing about waiting in a windstorm is that the pile doesn't wait with you." },
+    ],
+    readerTalk: [
+      { who: 'tempo', text: "That's a holdout. He backs off and waits, but the wind chips away at him the whole time." },
+      { who: 'tempo', text: 'The power-up orbs shrink in the wind too, so grab them early.' },
+      { who: 'lisa', text: "So holding out costs him, and dawdling costs me. I'd better grab what I can while it's still falling." },
+    ],
+    triggers: [
+      { id: 'wave1', x: 560, cam: 0, spawn: [['grunt', 1420, 560, 0], ['holdout', 1180, 630, 1.0], ['grunt', -160, 600, 2.4]] },
+      { id: 'wave2', x: 1750, cam: 1250, spawn: [['holdout', 2620, 560, 0], ['holdout', 2660, 630, 0.8], ['grunt', 1100, 600, 2.0], ['holdout', 2700, 590, 3.4]] },
+      { id: 'elite', x: 2800, cam: 2300, standoff: 'elite' },
+      { id: 'boss', x: 3620, cam: 4400 - 1280, standoff: 'boss' },
+    ],
+    elite: {
+      prefix: 'hank', name: 'Hank', label: 'HANK HOLDOUT', who: 'hank', kind: 'bargain', pronoun: 'he',
+      phases: [{ hp: 2, cards: [{ T: 2, first: 0, d: 'equal', delta: 0.5 }, { T: 2, first: 1, d: 'equal', delta: 0.6 }] }],
+      intro: [
+        { who: 'hank', text: 'Ledger lets me run the haggling out here, friend. I never take a first offer, and I can sit on a deal all night.' },
+        { who: 'tempo', text: 'This ladder plays out in rounds. You propose a split of the hundred coins, and he takes it or turns it down.' },
+        { who: 'tempo', text: "If he turns it down, he proposes next round, but the wind has eaten part of every share by then." },
+        { who: 'tempo', text: 'In the last round a refusal leaves nothing, so start there. Each offer is just what waiting is worth to whoever answers.' },
+      ],
+      outro: [
+        { who: 'hank', text: "I said I'd hold out all night, and I folded on the first offer. Don't tell Ledger." },
+        { who: 'lisa', text: "He didn't fold. I offered exactly what waiting was worth to him, so turning it down would only lose coins." },
+        { who: 'tempo', text: "'Never take the first offer' was an empty threat. Carrying it out would only have cost him." },
+        { who: 'tempo', text: 'Subgame perfect means every offer and answer is a best move from that round on. A deadline game is solved from the end.' },
+        { who: 'tempo', text: "Ledger's game never ends, though, and in that kind of game the first proposer has the edge." },
+      ],
+    },
+    boss: {
+      prefix: 'ledger', name: 'Ledger', label: 'LADY LEDGER', who: 'ledger', kind: 'bargain', pronoun: 'she', standY: 520,
+      phases: [
+        { hp: 2, cards: [{ mode: 'endless', d: 'equal' }] },
+        { hp: 2, cards: [{ mode: 'endless', d: 'equal', respond: true }] },
+        { hp: 2, cards: [{ mode: 'endless', d: 'apart', lisaPatient: true }, { mode: 'endless', d: 'apart', lisaPatient: false }] },
+      ],
+      phaseIntros: [
+        [
+          { who: 'ledger', text: 'Zero lent me this plaza and your little page, darling. I keep both unless you can out-haggle a banker.' },
+          { who: 'tempo', text: "Her game has no last round, so there's no bottom to start from. But every round looks the same as the one before." },
+          { who: 'tempo', text: 'So pick what you keep when you propose and run the chain. The deal is the keep that brings you back where you started.' },
+        ],
+        [
+          { who: 'ledger', cue: 'ledgerPile', text: 'This time I open, and my rate is final. Take my number or stand in the rain forever.' },
+          { who: 'tempo', text: 'Close the loop first, so you know what waiting is worth to you. Then judge her real offer against it.' },
+        ],
+        [
+          { who: 'ledger', text: "These are my final terms. The wind charges us different rates now, so let's see whose interest runs out first." },
+          { who: 'tempo', text: 'The wind takes a different bite from each of you per round. Close the loop again and see who it favours.' },
+        ],
+      ],
+      taunt: { who: 'ledger', text: 'Holdouts, stall her. Let the wind do my bargaining for me.' },
+      interludes: [[['holdout', 1400, 560, 0], ['holdout', -140, 630, 0.6]], [['holdout', 1400, 560, 0], ['grunt', -140, 630, 0.6], ['holdout', 1450, 600, 2]]],
+      outro: [
+        { who: 'ledger', text: 'I was sure I could outwait anyone, darling. You never let a round pass, so there was nothing left to wait for.' },
+        { who: 'lisa', text: "Zero said whoever holds out longest wins. Out here, whoever holds out just watches the money blow away." },
+        { who: 'zero', cue: 'zeroSweep', text: 'Bargains are for amateurs, my dears. Next you fight the same rivals again and again, and cooperation never lasts.' },
+        { who: 'tempo', text: "That's page six of the setlist! Hold it up." },
+        { who: 'juno', text: "Lisa, you closed that deal so fast I barely heard the wind! Now they've got me fighting the same rematch every night." },
+        { who: 'tempo', text: 'The next page blew to the Rematch Circuit, where nobody ever fights just once.' },
+      ],
+    },
+    end: {
+      title: 'MONEY RAIN CLEARED', notes: BOOK_NOTES_W6, chapter: 'Chapter 7',
+      dagger: "Hank's deadline ladder, the hundred coins, the wind, the holdouts and the shrinking orbs were made up for this game. The wind stands in for the book's discount factor. Coins are whole, so ladder offers round up and a loop keep counts if it comes back within half a coin. The loop card plays the book's endless game.",
       next: null,
     },
   },

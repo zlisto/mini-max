@@ -19,6 +19,7 @@ export default class Boot extends Phaser.Scene {
     this.load.audio('level_03', ['music/level_03.ogg', 'music/level_03.mp3'])
     this.load.audio('level_04', ['music/level_04.ogg', 'music/level_04.mp3'])
     this.load.audio('level_05', ['music/level_05.ogg', 'music/level_05.mp3'])
+    this.load.audio('level_06', ['music/level_06.ogg', 'music/level_06.mp3'])
     this.load.audio('title_theme', ['music/title_theme.ogg', 'music/title_theme.mp3'])
     this.load.audio('prologue_theme', ['music/prologue_theme.ogg', 'music/prologue_theme.mp3'])
     this.makePageTexture()
