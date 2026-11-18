@@ -6,6 +6,7 @@ import { BOOK_NOTES_W3 } from './dominance.js'
 import { BOOK_NOTES_W4 } from './knowledge.js'
 import { BOOK_NOTES_W5 } from './trees.js'
 import { BOOK_NOTES_W6 } from './bargain.js'
+import { BOOK_NOTES_W7 } from './repeated.js'
 
 export const LEVELS = {
   w1: {
@@ -486,6 +487,85 @@ export const LEVELS = {
     end: {
       title: 'MONEY RAIN CLEARED', notes: BOOK_NOTES_W6, chapter: 'Chapter 7',
       dagger: "Hank's deadline ladder, the hundred coins, the wind, the holdouts and the shrinking orbs were made up for this game. The wind stands in for the book's discount factor. Coins are whole, so ladder offers round up and a loop keep counts if it comes back within half a coin. The loop card plays the book's endless game.",
+      next: { level: 'w7', label: 'Next: The Rematch Circuit ▶' },
+    },
+  },
+
+  w7: {
+    id: 'w7', title: 'THE REMATCH CIRCUIT', chapter: 'Chapter 8: Repeated Games', music: 'level_07', width: 4400, page: 7, skin: 'lisag',
+    art: {
+      far: 'gym_far', mids: ['gym_mid_a'], ground: 'gym_ground', overlap: 70,
+      stage: { key: 'gym_stage', x: 3900, scale: 0.9 },
+      fg: [['fg_bag', 900, 0.7], ['fg_bench', 1900, 0.9], ['fg_bag', 3000, 0.7], ['fg_bench', 4200, 0.9]],
+    },
+    grunt: 'grudger', habitMeter: false, talkKind: 'grudger', grudgers: true,
+    intro: [
+      { who: 'tempo', text: "It's the Rematch Circuit, Lisa, where the same crews fight each other every single night." },
+      { who: 'zero', cue: 'zeroScreen', text: 'Welcome to the circuit, my dears. Here everyone meets again tomorrow, and the day after that.' },
+      { who: 'zero', text: 'Cooperation can never last. Sooner or later someone throws the cheap shot, and that is the end of it.' },
+      { who: 'lisa', cue: 'zeroScreenOff', text: "That only works if a cheap shot pays. Around here, tomorrow's rematch could cost more than tonight's win." },
+    ],
+    readerTalk: [
+      { who: 'tempo', text: 'Grudgers fight fair as long as you do. But your flip throw counts as a cheap shot here.' },
+      { who: 'lisa', text: "So if I throw one of them, the whole crew holds a grudge. I'd better fight fair." },
+    ],
+    triggers: [
+      { id: 'wave1', x: 560, cam: 0, spawn: [['grunt', 1420, 560, 0], ['grudger', 1180, 630, 1.0], ['grudger', 1340, 560, 1.8]] },
+      { id: 'wave2', x: 1750, cam: 1250, spawn: [['grudger', 2620, 560, 0], ['grudger', 2660, 630, 0.8], ['grunt', 1100, 600, 2.0], ['grudger', 2700, 590, 3.4]] },
+      { id: 'elite', x: 2800, cam: 2300, standoff: 'elite' },
+      { id: 'boss', x: 3620, cam: 4400 - 1280, standoff: 'boss' },
+    ],
+    elite: {
+      prefix: 'tatum', name: 'Tatiana', label: 'TATIANA TAT', who: 'tatum', kind: 'rematch', pronoun: 'she',
+      phases: [{ hp: 2, cards: [{ mode: 'disc', rival: ['tft'], deltas: [0.5, 0.6, 0.8, 0.9, 0.2, 0.25], otherSide: 1 / 3 }] }],
+      intro: [
+        { who: 'tatum', text: "We spar every night, Lisa. I'll match you move for move, so whatever you give me, you get back." },
+        { who: 'tempo', text: 'Each round you both spar or cheat. A cheap shot on someone who spars pays four, and two sparrers get three each.' },
+        { who: 'tempo', text: 'Her plan is a little machine. Pick your own plan, and the card plays the two of them, round after round.' },
+        { who: 'tempo', text: "Later rounds count less, by the card's percentage. 'Earns X a round' means a steady X would be worth just as much." },
+      ],
+      outro: [
+        { who: 'tatum', text: "You worked out what tomorrow was worth before you swung. Grimes hasn't sparred with me since one cheap shot, years ago." },
+        { who: 'lisa', text: "When the future counts enough, a cheap shot loses more than it wins. When it doesn't, nothing keeps me honest." },
+        { who: 'tempo', text: 'Her machine copies your last move, so a cheap shot comes right back. The threat of that keeps the sparring going.' },
+      ],
+    },
+    boss: {
+      prefix: 'grimes', name: 'Grimes', label: 'CHAMP GRIMES', who: 'grimes', kind: 'rematch', pronoun: 'he', standY: 520,
+      phases: [
+        { hp: 2, cards: [{ mode: 'disc', rival: ['grim'], deltas: [0.5, 0.6, 0.75, 0.9, 0.2, 0.25, 0.3], otherSide: 1 / 3 }] },
+        { hp: 3, cards: [{ mode: 'finite', T: 6, k: 0 }, { mode: 'finite', T: 6, k: 1 }, { mode: 'unravel', T: 6 }] },
+        { hp: 3, cards: [], mix: { pair: [{ mode: 'disc', rival: ['one'], deltas: [0.4, 0.45], who: 'this rival' }, { mode: 'disc', rival: ['grim'], sameDelta: true, who: 'this rival' }], extra: { mode: 'disc', rival: ['allD'], deltas: [0.5, 0.7, 0.9], who: 'this rival' } } },
+      ],
+      phaseIntros: [
+        [
+          { who: 'grimes', cue: 'grimesNoShake', text: "Zero gave me this circuit and your page, kid. I don't shake hands, and I don't forgive. Cross me once and we're done." },
+          { who: 'tempo', text: 'Cheating on Grim earns four once, then one a round. That beats three only if tomorrow counts for less than a third.' },
+        ],
+        [
+          { who: 'grimes', text: 'Bad news, kid. Zero says the circuit closes after six more bouts.' },
+          { who: 'tempo', text: 'Now there is a last round, and nobody can be punished after it. Your score is the average over the bouts.' },
+        ],
+        [
+          { who: 'grimes', text: 'One more fight, kid. My corner sends a different rival every time, and some of them never spar at all.' },
+          { who: 'tempo', text: 'The first two share the same patience. A short punishment and a grim one can give different answers at the same percentage.' },
+        ],
+      ],
+      taunt: { who: 'grimes', text: 'Grudgers, remind her what a grudge feels like.' },
+      interludes: [[['grudger', 1400, 560, 0], ['grudger', 1450, 630, 0.6]], [['grudger', 1400, 560, 0], ['grunt', -140, 630, 0.6], ['grudger', 1450, 600, 2]]],
+      outro: [
+        { who: 'grimes', text: "I've held a grudge against everyone on this circuit. Turns out the threat was what kept them in line." },
+        { who: 'tempo', text: 'Everyone believed his grudge, because cheating back cost him nothing. If punishing hurt him too, nobody would.' },
+        { who: 'lisa', text: 'Zero said cooperation can never last. It lasts while tomorrow matters, and breaks when everyone sees the end coming.' },
+        { who: 'zero', cue: 'zeroSweep', text: 'Cute, my dears. Grudges are crude, though. Next I write the rules, and no rule can make liars tell the truth.' },
+        { who: 'tempo', text: "That's page seven of the setlist! Hold it up." },
+        { who: 'juno', text: "Lisa, they stopped my rematch just to watch yours! Now they've moved me backstage at a theater full of rule books." },
+        { who: 'tempo', text: 'The next page blew to the Rulebook Theater, where every show runs on rules somebody wrote.' },
+      ],
+    },
+    end: {
+      title: 'REMATCH CIRCUIT CLEARED', notes: BOOK_NOTES_W7, chapter: 'Chapter 8',
+      dagger: "The rematch card, the plan names, Copycat, One and Forgive, the six-bout circuit, the grudgers and Lisa's throw as a cheap shot were made up for this game. Payoffs follow Figure 134.1. The book doesn't print the one-third line, which comes from those payoffs, and each value is added up over six hundred rounds.",
       next: null,
     },
   },

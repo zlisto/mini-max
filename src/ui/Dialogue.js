@@ -19,6 +19,8 @@ const WHO = {
   chains: { name: 'MR. CHAINSWORTH', key: 'chains_portrait', side: 'right', color: '#ff8a8a' },
   hank: { name: 'HANK HOLDOUT', key: 'hank_portrait', side: 'right', color: '#e8c08a' },
   ledger: { name: 'LADY LEDGER', key: 'ledger_portrait', side: 'right', color: '#7dffb0' },
+  tatum: { name: 'TATIANA TAT', key: 'tatum_portrait', side: 'right', color: '#5ce1d6' },
+  grimes: { name: 'CHAMP GRIMES', key: 'grimes_portrait', side: 'right', color: '#c9b8ec' },
   dealer: { name: 'DEALER', key: 'dealer_idle', side: 'right', color: '#ff9a5c' },
 }
 

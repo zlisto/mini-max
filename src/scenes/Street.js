@@ -7,6 +7,7 @@ import { ElimStandoff } from '../ui/ElimStandoff.js'
 import { SignalStandoff } from '../ui/SignalStandoff.js'
 import { TreeStandoff } from '../ui/TreeStandoff.js'
 import { BargainStandoff } from '../ui/BargainStandoff.js'
+import { RematchStandoff } from '../ui/RematchStandoff.js'
 import { BEATS, MOVES } from '../data/games.js'
 import { LEVELS } from '../data/levels.js'
 import { loadSave, writeSave } from '../systems/save.js'
@@ -78,6 +79,7 @@ export default class Street extends Phaser.Scene {
     this.readerTalked = false
     this.tipUp = false
     this.tempoBusy = false
+    this.grudge = false
     this.tempoPost = !!this.L.tempoAcross && this.checkpoint > 0 // posted on the far mast (W4)
     if (this.tempoLamp) { this.tempoLamp.destroy(); this.tempoLamp = null }
     if (this.tempoPost) this.postTempo()
@@ -188,7 +190,7 @@ export default class Street extends Phaser.Scene {
 
   // ---------------------------------------------------------------- enemies
   spawn(kind, x, y) {
-    const prefix = kind === 'dealer' ? 'dealer' : kind === 'mimic' ? 'mimic' : kind === 'signal' ? 'signal' : kind === 'bluffer' ? 'bluffer' : kind === 'holdout' ? 'holdout' : 'grunt'
+    const prefix = kind === 'dealer' ? 'dealer' : kind === 'mimic' ? 'mimic' : kind === 'signal' ? 'signal' : kind === 'bluffer' ? 'bluffer' : kind === 'holdout' ? 'holdout' : kind === 'grudger' ? 'grudger' : 'grunt'
     const e = new Fighter(this, prefix, x, y, { hp: kind === 'grunt' ? 5 : 6 })
     Object.assign(e, { kind, st: 'free', t: 0, wait: 0.6 + Math.random() * 0.8, laneOff: Phaser.Math.Between(kind === 'dealer' ? -26 : -10, kind === 'dealer' ? 26 : 10) })
     if (kind === 'reader') {
@@ -199,6 +201,10 @@ export default class Street extends Phaser.Scene {
     if (kind === 'mimic') {
       e.shadow.setFillStyle(0xe8dcff, 0.6)
       e.tag = this.add.text(x, y - 270, 'MIMIC', { fontFamily: 'Bangers', fontSize: '22px', color: '#e8dcff', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5)
+    }
+    if (kind === 'grudger') {
+      e.shadow.setFillStyle(0xffb36b, 0.6)
+      e.tag = this.add.text(x, y - 270, this.grudge ? 'GRUDGE!' : 'FAIR FIGHT', { fontFamily: 'Bangers', fontSize: '22px', color: this.grudge ? '#ff6b7a' : '#ffd166', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5)
     }
     if (kind === 'holdout') {
       e.shadow.setFillStyle(0x7dffb0, 0.6)
@@ -437,6 +443,10 @@ export default class Street extends Phaser.Scene {
     const ex = this.exchange('throw', e)
     if (ex === 'lose') { this.beaten(e); return }
     if (ex === 'clash') { L.whiff = true; this.clash(e); return }
+    if (this.L.grudgers && !this.grudge && e.kind === 'grudger') { // the cheap shot landed on one of them
+      this.grudge = true
+      this.alive().filter((f) => f.kind === 'grudger').forEach((f) => { if (f.tag) f.tag.setText('GRUDGE!').setColor('#ff6b7a'); this.floatText(f.x, f.y - 320, 'GRUDGE!', '#ff6b7a', 4100, 600) })
+    }
     const counter = ex === 'win'
     L.st = 'flip'; L.t = 0; L.invuln = Math.max(L.invuln, 0.75)
     e.st = 'held'; e.t = 0; e.tint(null); e.setPose('hurt'); e.hitDone = true
@@ -624,7 +634,7 @@ export default class Street extends Phaser.Scene {
           const mv = this.pickMove(e)
           e.st = mv; e.t = 0; e.hitDone = false
           e.setPose('idle')
-          e.tint(e.kind === 'mimic' ? 0xe8dcff : TINT[mv])
+          e.tint(e.kind === 'mimic' ? 0xe8dcff : e.kind === 'grudger' && this.grudge ? 0xb8b8c8 : TINT[mv])
         }
         continue
       }
@@ -649,7 +659,7 @@ export default class Street extends Phaser.Scene {
           if (Math.abs(gx - e.x) > 4) e.x += Math.sign(gx - e.x) * Math.min(Math.abs(gx - e.x), 260 * dt)
         }
         e.moveTag = e.moveTag || this.add.text(0, 0, '', { fontFamily: 'Bangers', fontSize: '26px', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5)
-        const hidden = e.kind === 'mimic' || e.kind === 'signal' // mimics: predict from your last move; signalers: read the flare
+        const hidden = e.kind === 'mimic' || e.kind === 'signal' || (e.kind === 'grudger' && this.grudge) // a grudger with a grudge hides his wind-up
         const tag = e.kind === 'mimic' ? 'MIRROR...' : e.alone ? 'GUESS...' : '...'
         e.moveTag.setText(e.hitDone ? '' : hidden ? tag : e.st.toUpperCase()).setColor(hidden ? (e.kind === 'signal' ? '#ffb36b' : '#e8dcff') : TINT_CSS[e.st]).setPosition(e.x, e.y - (hidden ? 330 : 300)).setDepth(2950)
         if (!e.hitDone && e.t > 0.5) {
@@ -666,7 +676,7 @@ export default class Street extends Phaser.Scene {
             }
           }
         }
-        if (MOVES.includes(e.st) && e.t > 0.95) { e.st = 'free'; e.t = 0; e.paired = false; e.alone = false; e.setPose('idle'); e.wait = 0.7 + Math.random() * 0.7 }
+        if (MOVES.includes(e.st) && e.t > 0.95) { e.st = 'free'; e.t = 0; e.paired = false; e.alone = false; e.setPose('idle'); e.wait = e.kind === 'grudger' && this.grudge ? 0.25 + Math.random() * 0.3 : 0.7 + Math.random() * 0.7 }
       }
     }
   }
@@ -734,6 +744,7 @@ export default class Street extends Phaser.Scene {
 
   // spawn: [[kind, x, y, delay]]; x is absolute, or relative to the locked camera when `relative`
   startWave(spawn, onClear, relative = false) {
+    this.grudge = false
     this.wave = { onClear: onClear || (() => this.unlock()), count: spawn.length }
     this.time.delayedCall(500, () => this.dropPickup())
     const w = this.wave
@@ -773,7 +784,7 @@ export default class Street extends Phaser.Scene {
 
   // ---------------------------------------------------------------- standoffs
   makeStandoff(cfg, enemy, handlers) {
-    const Cls = cfg.kind === 'mix' ? MixStandoff : cfg.kind === 'elim' ? ElimStandoff : cfg.kind === 'signal' ? SignalStandoff : cfg.kind === 'tree' ? TreeStandoff : cfg.kind === 'bargain' ? BargainStandoff : Standoff
+    const Cls = cfg.kind === 'mix' ? MixStandoff : cfg.kind === 'elim' ? ElimStandoff : cfg.kind === 'signal' ? SignalStandoff : cfg.kind === 'tree' ? TreeStandoff : cfg.kind === 'bargain' ? BargainStandoff : cfg.kind === 'rematch' ? RematchStandoff : Standoff
     return new Cls(this, {
       lisa: this.lisa, enemy, enemyName: cfg.name, pronoun: cfg.pronoun, phases: cfg.phases,
       say: (s, y) => this.caption.show(s, y), onLose: () => this.die(), ...handlers,
@@ -793,7 +804,7 @@ export default class Street extends Phaser.Scene {
 
   // the foe's HUD bar uses the colour of the foe's numbers on the card
   foeColor(kind) {
-    const blue = kind === 'elim' || kind === 'tree' || kind === 'bargain'
+    const blue = kind === 'elim' || kind === 'tree' || kind === 'bargain' || kind === 'rematch'
     const c = blue ? 0x7fd6ff : kind === 'signal' ? 0xffd166 : 0xff9a5c
     this.foeBar.setFillStyle(c)
     this.foeLabel.setColor(blue ? '#7fd6ff' : kind === 'signal' ? '#ffd166' : '#ff9a5c')
@@ -995,6 +1006,12 @@ export default class Street extends Phaser.Scene {
         this.tweens.add({ targets: note, x: note.x + Phaser.Math.Between(260, 520), y: note.y - Phaser.Math.Between(80, 220), angle: note.angle + Phaser.Math.Between(180, 540), alpha: 0, duration: Phaser.Math.Between(900, 1500), delay: k * 60, onComplete: () => note.destroy() })
       }
       sfx(this, 'whoosh')
+    } else if (name === 'grimesNoShake' && this.boss) {
+      // Lisa offers a glove tap; he turns his back
+      const b = this.boss
+      this.lisa.setPose('strike')
+      this.time.delayedCall(400, () => { this.lisa.setPose('idle'); b.face(1); this.floatText(b.x, b.y - 320, 'NO HANDSHAKE', '#c9b8ec', 4100, 700) })
+      this.time.delayedCall(1700, () => b.face(-1))
     } else if (name === 'tempoAcross') {
       // Tempo flies off to signal from a far mast
       this.postTempo()
