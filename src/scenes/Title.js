@@ -71,7 +71,7 @@ export default class Title extends Phaser.Scene {
     this.add.text(640, 690, 'Based on A Course in Game Theory by Martin J. Osborne & Ariel Rubinstein (MIT Press, 1994). A fan-made learning game.', {
       fontFamily: 'Nunito', fontStyle: '800', fontSize: '15px', color: '#b9a6e0', align: 'center', wordWrap: { width: 1200 },
     }).setOrigin(0.5)
-    this.add.text(640, 640, 'Move: arrows / WASD    Punch: J    Kick: K    Throw: L    Talk: Space    Music: M', {
+    this.add.text(640, 640, 'Move: arrows / WASD    Punch: J    Kick: K    Throw: L    Blitz: →→J    Talk: Space    Music: M', {
       fontFamily: 'Nunito', fontStyle: '800', fontSize: '18px', color: '#ffffff',
     }).setOrigin(0.5)
   }

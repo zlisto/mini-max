@@ -24,7 +24,7 @@ export default class End extends Phaser.Scene {
       this.add.text(1130, y, ref, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '18px', color: '#b9a6e0' }).setOrigin(1, 0)
     })
     const gap = E.notes.length > 8 ? 33 : 36
-    const dag = this.add.text(640, 208 + E.notes.length * gap + 12, `† ${E.dagger}\nThe ideas they illustrate are the book's: Osborne & Rubinstein, A Course in Game Theory (MIT Press, 1994), ${E.chapter}.`, {
+    const dag = this.add.text(640, 208 + E.notes.length * gap + 12, `† ${E.dagger} The blitz, the power-ups and the boss fights are game inventions too.\nThe ideas they illustrate are the book's: Osborne & Rubinstein, A Course in Game Theory (MIT Press, 1994), ${E.chapter}.`, {
       fontFamily: 'Nunito', fontStyle: '800', fontSize: '18px', color: '#c9b8ec', align: 'center', wordWrap: { width: 1150 },
     }).setOrigin(0.5, 0)
     const btn = (x, label, go) => {

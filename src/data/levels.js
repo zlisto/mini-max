@@ -7,6 +7,7 @@ import { BOOK_NOTES_W4 } from './knowledge.js'
 import { BOOK_NOTES_W5 } from './trees.js'
 import { BOOK_NOTES_W6 } from './bargain.js'
 import { BOOK_NOTES_W7 } from './repeated.js'
+import { BOOK_NOTES_W8 } from './mechanism.js'
 
 export const LEVELS = {
   w1: {
@@ -69,6 +70,7 @@ export const LEVELS = {
           { who: 'tempo', text: 'Every point she wins, you lose, so her +2 is your −2. Flip the signs in your head.' },
         ],
       ],
+      brawl: { who: 'sadie', text: "Fine, you can read a table. Let's see if you can read a punch." },
       taunt: { who: 'sadie', text: 'Crew! Ruin her night.' },
       interludes: [[['grunt', 1400, 560, 0], ['grunt', -140, 630, 0.6]], [['grunt', 1400, 560, 0], ['reader', -140, 630, 0.6]]],
       outro: [
@@ -142,6 +144,7 @@ export const LEVELS = {
           { who: 'tempo', text: "You have three answers to balance now. After each spin I'll show that wheel's averages, so use them." },
         ],
       ],
+      brawl: { who: 'lou', text: "Luck's run out on the cards, so I'll just have to deal with you myself." },
       taunt: { who: 'lou', text: 'Dealers! Reshuffle the lady.' },
       interludes: [[['dealer', 1400, 560, 0], ['dealer', -140, 630, 0.6]], [['dealer', 1400, 560, 0], ['dealer', -140, 630, 0.6], ['dealer', 1450, 600, 2]]],
       outro: [
@@ -222,6 +225,7 @@ export const LEVELS = {
           { who: 'tempo', text: "If nothing outscores a tied move everywhere, it's still a best answer to some guess about her, so you can't rule it out." },
         ],
       ],
+      brawl: { who: 'mira', text: 'You beat my reflection. Now try the real thing, up close.' },
       taunt: { who: 'mira', text: 'Mimics, show her what she looks like from the outside.' },
       interludes: [[['mimic', 1400, 560, 0], ['mimic', -140, 630, 0.6]], [['mimic', 1400, 560, 0], ['grunt', -140, 630, 0.6], ['mimic', 1450, 600, 2]]],
       outro: [
@@ -306,6 +310,7 @@ export const LEVELS = {
           { who: 'tempo', text: "That off night is the first lamp, and the ladder climbs from there. Is the plan ever common knowledge?" },
         ],
       ],
+      brawl: { who: 'vox', text: 'We interrupt this broadcast for a good old-fashioned beating.' },
       taunt: { who: 'vox', text: "Signalers, cut in! We'll be right back after this beating." },
       interludes: [[['signal', 1400, 560, 0], ['signal', 1450, 630, 0.4]], [['signal', 1400, 560, 0], ['signal', -140, 630, 0.6], ['grunt', 1450, 600, 2]]],
       outro: [
@@ -390,6 +395,7 @@ export const LEVELS = {
           { who: 'tempo', text: 'Start with the last town, where nobody is left to scare. Then ask what fighting earlier could buy him.' },
         ],
       ],
+      brawl: { who: 'chains', text: "Enough threats. This time I'm actually going to do it." },
       taunt: { who: 'chains', text: 'Bluffers, get out there and soften her up. I need a minute.' },
       interludes: [[['bluffer', 1400, 560, 0], ['bluffer', -140, 630, 0.6]], [['bluffer', 1400, 560, 0], ['grunt', -140, 630, 0.6], ['bluffer', 1450, 600, 2]]],
       outro: [
@@ -473,6 +479,7 @@ export const LEVELS = {
           { who: 'tempo', text: 'The wind takes a different bite from each of you per round. Close the loop again and see who it favours.' },
         ],
       ],
+      brawl: { who: 'ledger', text: 'The talking is over, darling. Now I collect in person.' },
       taunt: { who: 'ledger', text: 'Holdouts, stall her. Let the wind do my bargaining for me.' },
       interludes: [[['holdout', 1400, 560, 0], ['holdout', -140, 630, 0.6]], [['holdout', 1400, 560, 0], ['grunt', -140, 630, 0.6], ['holdout', 1450, 600, 2]]],
       outro: [
@@ -551,6 +558,7 @@ export const LEVELS = {
           { who: 'tempo', text: 'The first two share the same patience. A short punishment and a grim one can give different answers at the same percentage.' },
         ],
       ],
+      brawl: { who: 'grimes', text: 'No more rounds on paper, kid. This one goes the distance.' },
       taunt: { who: 'grimes', text: 'Grudgers, remind her what a grudge feels like.' },
       interludes: [[['grudger', 1400, 560, 0], ['grudger', 1450, 630, 0.6]], [['grudger', 1400, 560, 0], ['grunt', -140, 630, 0.6], ['grudger', 1450, 600, 2]]],
       outro: [
@@ -566,6 +574,84 @@ export const LEVELS = {
     end: {
       title: 'REMATCH CIRCUIT CLEARED', notes: BOOK_NOTES_W7, chapter: 'Chapter 8',
       dagger: "The rematch card, the plan names, Copycat, One and Forgive, the six-bout circuit, the grudgers and Lisa's throw as a cheap shot were made up for this game. Payoffs follow Figure 134.1. The book doesn't print the one-third line, which comes from those payoffs, and each value is added up over six hundred rounds.",
+      next: { level: 'w8', label: 'Next: The Rulebook Theater ▶' },
+    },
+  },
+
+  w8: {
+    id: 'w8', title: 'THE RULEBOOK THEATER', chapter: 'Chapter 10: Implementation Theory', music: 'level_08', width: 4400, page: 8, skin: 'lisag',
+    art: {
+      far: 'theater_far', mids: ['theater_mid_a'], ground: 'theater_ground', overlap: 150,
+      stage: { key: 'theater_stage', x: 3900, scale: 0.9 },
+      fg: [['fg_spot', 180, 0.7], ['fg_trunk', 1900, 0.9], ['fg_spot', 3000, 0.7], ['fg_trunk', 4200, 0.9]],
+    },
+    grunt: 'fibber', habitMeter: false, talkKind: 'fibber',
+    intro: [
+      { who: 'tempo', text: 'A theater full of rule books, just like Juno said. Page eight is somewhere behind that curtain.' },
+      { who: 'zero', cue: 'zeroScreen', text: 'Welcome to my theater, my dears. Everyone here says one thing and does another.' },
+      { who: 'zero', text: 'No rule can make liars tell the truth. People lie whenever lying pays them, and no rule book will change that.' },
+      { who: 'lisa', cue: 'zeroScreenOff', text: 'Then I just need rules where lying never pays.' },
+    ],
+    readerTalk: [
+      { who: 'tempo', text: 'Fibbers call their move before they swing, but half the time the call is a lie meant to bait the wrong counter.' },
+      { who: 'lisa', text: "So I can't trust what they say. But if I catch one in a lie, it costs him, and he stops lying." },
+    ],
+    triggers: [
+      { id: 'wave1', x: 560, cam: 0, spawn: [['grunt', 1420, 560, 0], ['fibber', 1180, 630, 1.0], ['fibber', 1340, 560, 1.8]] },
+      { id: 'wave2', x: 1750, cam: 1250, spawn: [['fibber', 2620, 560, 0], ['fibber', 2660, 630, 0.8], ['grunt', 1100, 600, 2.0], ['fibber', 2700, 590, 3.4]] },
+      { id: 'elite', x: 2800, cam: 2300, standoff: 'elite' },
+      { id: 'boss', x: 3620, cam: 4400 - 1280, standoff: 'boss' },
+    ],
+    elite: {
+      prefix: 'ham', name: 'Hamish', label: 'HAMISH HAM', who: 'ham', kind: 'rulebook', pronoun: 'he',
+      phases: [{ hp: 2, cards: [{ mode: 'claim', rule: 'claim' }, { mode: 'claim', rule: 'groves' }] }],
+      intro: [
+        { who: 'ham', text: "Ah, a new player! The company votes on a stage upgrade, and each of us declares, hand on heart, what it's worth." },
+        { who: 'tempo', text: "You're the planner now. It gets built if the three claims add up to at least its cost, and the card sets what each pays." },
+        { who: 'tempo', text: 'You know your true value. Pick the claim that leaves you best off, and watch whether the truth is it.' },
+      ],
+      outro: [
+        { who: 'ham', text: 'Under the first rule I lied like a leading man. Redline writes traps, but the second rule left me no reason to lie.' },
+        { who: 'lisa', text: "So the rule decides if truth pays. When I pay just the part the others leave uncovered, the truth is my best claim." },
+        { who: 'tempo', text: "A move that's best whatever the others do is called dominant. That second rule is a Groves mechanism." },
+      ],
+    },
+    boss: {
+      prefix: 'redline', name: 'Redline', label: 'REDLINE', who: 'redline', kind: 'rulebook', pronoun: 'she', standY: 520,
+      phases: [
+        { hp: 2, cards: [{ mode: 'rule', set: 1 }, { mode: 'rule', set: 2 }] },
+        { hp: 2, cards: [{ mode: 'vote', set: 1 }, { mode: 'vote', set: 2 }] },
+        { hp: 2, cards: [{ mode: 'solomon' }] },
+      ],
+      phaseIntros: [
+        [
+          { who: 'redline', cue: 'redlineStrike', text: "Zero gave me the house and your page. Write me a rule where nobody gains by lying, and I'll eat my red pen." },
+          { who: 'tempo', text: "Pick a payment rule for the upgrade. These aren't Ham's rules, so look at what each one makes you pay, and why." },
+        ],
+        [
+          { who: 'redline', text: "Money makes it easy. This time it's a vote on three shows, and nobody pays anyone a penny." },
+          { who: 'tempo', text: "Any rule that works can be rewritten as asking for each ranking. That's the revelation principle, so test each one." },
+        ],
+        [
+          { who: 'redline', text: "Two actors swear the lead is theirs, and one is lying. Solomon had the same trouble, so I borrowed his trick." },
+          { who: 'tempo', text: 'Each is asked in turn, and a yes can carry a fine. Work back from the last question, like the deadline games.' },
+        ],
+      ],
+      brawl: { who: 'redline', text: "The rule book says I lost, so I'm tearing out that page and fighting you myself." },
+      taunt: { who: 'redline', text: 'Fibbers, places. Tell her whatever she wants to hear.' },
+      interludes: [[['fibber', 1400, 560, 0], ['fibber', 1450, 630, 0.6]], [['fibber', 1400, 560, 0], ['grunt', -140, 630, 0.6], ['fibber', 1450, 600, 2]]],
+      outro: [
+        { who: 'redline', cue: 'redlinePen', text: "Fine, I'll eat the pen. Just remember that a lie-proof vote where every show can win still needs a dictator." },
+        { who: 'lisa', text: 'Zero was half right. A lie-proof vote where any show can win needs a dictator, but with money or a fine, truth can pay.' },
+        { who: 'zero', cue: 'zeroSweep', text: 'Rules only work in the light, my dears. In my next club nobody sees a thing, and ignorance is just weakness.' },
+        { who: 'tempo', text: "That's page eight of the setlist! Hold it up." },
+        { who: 'juno', text: "Lisa, I heard the whole theater clap! Now it's so foggy where they've taken me, I can't tell which room I'm in." },
+        { who: 'tempo', text: "The next page drifted into the Fog Club, where you never quite know where you're standing." },
+      ],
+    },
+    end: {
+      title: 'RULEBOOK THEATER CLEARED', notes: BOOK_NOTES_W8, chapter: 'Chapter 10',
+      dagger: "The cards, the rule names, the upgrade's cost of ten, the shows and the fibbers (and catching one turning him honest) were made up for this game. Pay the Gap, The Door Fee and The Kickback are Groves mechanisms (184.1); Pay the Gap is Clarke's version, which works here because claims can't go below zero. Values are whole coins, the others' totals are tested in half coins, the token fine is half a coin, and voters' rankings have no ties, though the book allows them. Solomon's form follows Figure 191.1.",
       next: null,
     },
   },

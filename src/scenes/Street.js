@@ -8,6 +8,7 @@ import { SignalStandoff } from '../ui/SignalStandoff.js'
 import { TreeStandoff } from '../ui/TreeStandoff.js'
 import { BargainStandoff } from '../ui/BargainStandoff.js'
 import { RematchStandoff } from '../ui/RematchStandoff.js'
+import { RulebookStandoff } from '../ui/RulebookStandoff.js'
 import { BEATS, MOVES } from '../data/games.js'
 import { LEVELS } from '../data/levels.js'
 import { loadSave, writeSave } from '../systems/save.js'
@@ -31,6 +32,8 @@ const POWER = {
   nash: { key: 'fx_nash', name: 'EQUILIBRIUM SHIELD', color: '#5ce1d6', tip: 'At a Nash equilibrium no player gains by changing their own move alone. Like that, for 6 seconds no hit gains them anything. †' },
   best: { key: 'fx_best', name: 'BEST RESPONSE', color: '#ffd166', tip: 'A best response is a move that does best against what the other side is playing. For 8 seconds, every move you make is one. †' },
 }
+const BOSS_HP = 16
+const BLITZ_CD = 3.5
 const counterOf = (m) => Object.keys(BEATS).find((k) => BEATS[k] === m)
 
 // One street level, driven by LEVELS[id]: brawl waves, an elite standoff, a boss with three phases.
@@ -80,6 +83,18 @@ export default class Street extends Phaser.Scene {
     this.tipUp = false
     this.tempoBusy = false
     this.grudge = false
+    this.bossFight = null
+    this.blitzCd = 0
+    this.tap = null
+    this.shots = []
+    // forward, forward, punch: the blitz. Two taps of the same direction inside 0.3 s arm it for 0.4 s
+    this.input.keyboard.on('keydown', (ev) => {
+      if (ev.repeat) return
+      const dir = ev.code === 'ArrowRight' || ev.code === 'KeyD' ? 1 : ev.code === 'ArrowLeft' || ev.code === 'KeyA' ? -1 : 0
+      if (!dir) return
+      if (this.tap && this.tap.dir === dir && this.elapsed - this.tap.t < 0.3) this.tap = { dir, t: this.elapsed, armed: this.elapsed }
+      else this.tap = { dir, t: this.elapsed }
+    })
     this.tempoPost = !!this.L.tempoAcross && this.checkpoint > 0 // posted on the far mast (W4)
     if (this.tempoLamp) { this.tempoLamp.destroy(); this.tempoLamp = null }
     if (this.tempoPost) this.postTempo()
@@ -149,6 +164,8 @@ export default class Street extends Phaser.Scene {
       })
     }
     this.powerLabel = this.add.text(112, 660, '', { fontFamily: 'Bangers', fontSize: '22px', color: '#ffd166', stroke: '#000', strokeThickness: 4 }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d)
+    this.blitzPlate = this.add.rectangle(372, 660, 112, 28, 0x0b0614, 0.85).setOrigin(1, 0.5).setScrollFactor(0).setDepth(d)
+    this.blitzLabel = this.add.text(366, 660, 'BLITZ ▶▶J', { fontFamily: 'Bangers', fontSize: '20px', color: '#ff5fa2', stroke: '#000', strokeThickness: 4 }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(d)
     this.muteLabel = this.add.text(1252, 652, '', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '15px', color: '#b9a6e0' })
       .setOrigin(1, 0).setScrollFactor(0).setDepth(d)
     this.foeLabel = this.add.text(1252, 686, '', { fontFamily: 'Bangers', fontSize: '24px', color: '#ff9a5c' }).setOrigin(1, 0).setScrollFactor(0).setDepth(d)
@@ -190,7 +207,7 @@ export default class Street extends Phaser.Scene {
 
   // ---------------------------------------------------------------- enemies
   spawn(kind, x, y) {
-    const prefix = kind === 'dealer' ? 'dealer' : kind === 'mimic' ? 'mimic' : kind === 'signal' ? 'signal' : kind === 'bluffer' ? 'bluffer' : kind === 'holdout' ? 'holdout' : kind === 'grudger' ? 'grudger' : 'grunt'
+    const prefix = kind === 'dealer' ? 'dealer' : kind === 'mimic' ? 'mimic' : kind === 'signal' ? 'signal' : kind === 'bluffer' ? 'bluffer' : kind === 'holdout' ? 'holdout' : kind === 'grudger' ? 'grudger' : kind === 'fibber' ? 'fibber' : 'grunt'
     const e = new Fighter(this, prefix, x, y, { hp: kind === 'grunt' ? 5 : 6 })
     Object.assign(e, { kind, st: 'free', t: 0, wait: 0.6 + Math.random() * 0.8, laneOff: Phaser.Math.Between(kind === 'dealer' ? -26 : -10, kind === 'dealer' ? 26 : 10) })
     if (kind === 'reader') {
@@ -201,6 +218,10 @@ export default class Street extends Phaser.Scene {
     if (kind === 'mimic') {
       e.shadow.setFillStyle(0xe8dcff, 0.6)
       e.tag = this.add.text(x, y - 270, 'MIMIC', { fontFamily: 'Bangers', fontSize: '22px', color: '#e8dcff', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5)
+    }
+    if (kind === 'fibber') {
+      e.shadow.setFillStyle(0xd8c8a8, 0.95).setStrokeStyle(3, 0xfff1d6, 0.9)
+      e.tag = this.add.text(x, y - 270, 'FIBBER', { fontFamily: 'Bangers', fontSize: '22px', color: '#e8c08a', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5)
     }
     if (kind === 'grudger') {
       e.shadow.setFillStyle(0xffb36b, 0.6)
@@ -304,7 +325,8 @@ export default class Street extends Phaser.Scene {
       }
       this.checkPickups()
       if (this.L.windOrbs) for (const pk of this.pickups) if (pk.type === 'payoff') { const g = Math.max(2, 6 - Math.floor((this.elapsed - pk.born) / 3)); pk.img.setDisplaySize(36 + g * 6, 36 + g * 6) }
-      if (pPunch) {
+      const blitzReady = pPunch && this.tap && this.tap.armed != null && this.elapsed - this.tap.armed < 0.4 && this.tap.dir === L.facing && this.blitzCd <= 0
+      if (blitzReady) { this.tap = null; this.blitz() } else if (pPunch) {
         L.combo = this.elapsed - L.lastStrikeEnd < 0.35 ? (L.combo % 3) + 1 : 1
         this.act('punch')
       } else if (pKick) this.act('kick')
@@ -318,6 +340,8 @@ export default class Street extends Phaser.Scene {
     } else if (L.st === 'throw') {
       if (!L.hitDone && L.t > 0.1) { L.hitDone = true; this.lisaThrow() }
       if (L.st === 'throw' && L.t > 0.42) this.toFree()
+    } else if (L.st === 'blitz') {
+      if (L.t > 0.45) this.toFree()
     } else if (L.st === 'flip') {
       if (L.t > 0.75) { L.lift = 0; this.toFree() }
     } else if (L.st === 'recoil' && L.t > 0.3) this.toFree()
@@ -334,6 +358,61 @@ export default class Street extends Phaser.Scene {
     if (move === 'punch') { L.x += 14 * L.facing; sfx(this, 'whoosh') }
     if (move === 'kick') { L.x += 8 * L.facing; sfx(this, 'whooshBig') }
     if (move === 'throw') { L.x += 18 * L.facing; L.whiff = false; sfx(this, 'whoosh') }
+  }
+
+  // The blitz (forward, forward, punch): a dash and a High Note, a blast of sound that knocks down everyone in its lane †
+  blitz() {
+    const L = this.lisa
+    L.st = 'blitz'; L.t = 0; L.hitDone = true
+    L.invuln = Math.max(L.invuln, 0.35)
+    L.setPose('strike')
+    this.blitzCd = BLITZ_CD
+    const lo = this.locked != null ? this.locked + 90 : 40, hi = this.locked != null ? this.locked + 1190 : this.W - 60
+    this.tweens.add({ targets: L, x: Phaser.Math.Clamp(L.x + 90 * L.facing, lo, hi), duration: 120, ease: 'Cubic.out' })
+    sfx(this, 'whooshBig')
+    this.time.delayedCall(110, () => {
+      const dir = L.facing, x = L.x + 70 * dir, y = L.y
+      const glow = this.add.circle(x, y - 175, 62, 0xff5fa2, 0.35)
+      const ring = this.add.circle(x, y - 175, 40, 0xff5fa2, 0.9).setStrokeStyle(6, 0xffd166)
+      const core = this.add.circle(x, y - 175, 18, 0xffffff, 1)
+      const note = this.add.text(x, y - 177, '♪', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '38px', color: '#2a0f4a' }).setOrigin(0.5)
+      const parts = [glow, ring, core, note]
+      parts.forEach((o) => o.setDepth(y + 2))
+      this.tweens.add({ targets: glow, scale: 1.25, duration: 120, yoyo: true, repeat: -1 })
+      this.shots.push({ x, y, dir, dist: 0, parts, hit: new Set(), trail: 0 })
+      this.floatText(L.x, L.y - 300, 'HIGH NOTE!', '#ff5fa2', 4100, 200)
+      sfx(this, 'sting')
+    })
+  }
+
+  updateShots(dt) {
+    for (const sh of this.shots.slice()) {
+      const step = 950 * dt
+      sh.x += step * sh.dir; sh.dist += step
+      sh.parts.forEach((o) => { o.x = sh.x })
+      sh.parts[1].angle += 600 * dt
+      sh.trail -= dt
+      if (sh.trail <= 0) {
+        sh.trail = 0.035
+        const st = this.add.star(sh.x - 30 * sh.dir, sh.y - 175 + Phaser.Math.Between(-18, 18), 5, 4, 10, Phaser.Utils.Array.GetRandom([0xffd166, 0xff5fa2, 0xffffff])).setDepth(sh.y + 1)
+        this.tweens.add({ targets: st, alpha: 0, scale: 0.2, y: st.y + Phaser.Math.Between(-20, 20), duration: 300, onComplete: () => st.destroy() })
+      }
+      for (const e of this.alive()) {
+        if (sh.hit.has(e) || e.st === 'down' || e.st === 'held' || Math.abs(e.y - sh.y) > DEPTH_TOL + 14 || Math.abs(e.x - sh.x) > 60) continue
+        sh.hit.add(e)
+        if (e.st === 'bluff') { if (e.shout) { e.shout.destroy(); e.shout = null } if (e.tag) e.tag.setText('BLUFFER').setColor('#ff8a8a') }
+        const f = this.lisa.facing; this.lisa.facing = sh.dir
+        this.hurtEnemy(e, 2, 110, true)
+        this.lisa.facing = f
+        this.spark(e.x, e.y - 170, 0xff5fa2)
+        this.cam.shake(90, 0.004)
+      }
+      const lo = (this.locked ?? this.cam.scrollX) - 40, hi = (this.locked ?? this.cam.scrollX) + 1320
+      if (sh.dist > 900 || sh.x < lo || sh.x > hi) {
+        this.shots.splice(this.shots.indexOf(sh), 1)
+        this.tweens.add({ targets: sh.parts, alpha: 0, scale: 1.6, duration: 160, onComplete: () => sh.parts.forEach((o) => o.destroy()) })
+      }
+    }
   }
 
   toFree() { const L = this.lisa; L.st = 'free'; L.t = 0; L.lift = 0; L.setPose('idle') }
@@ -363,7 +442,7 @@ export default class Street extends Phaser.Scene {
     e.hitDone = true; e.setPose(e.st); e.tint(null)
     if (this.lisa.invuln > 0 || this.lisa.shield > 0) return this.hurtLisa(E_DMG[e.st], false, e)
     this.floatText(this.lisa.x, this.lisa.y - 285, `${e.st.toUpperCase()} BEATS ${mine.toUpperCase()}`, '#ff7a7a')
-    this.hurtLisa(E_DMG[e.st], e.st === 'throw', e)
+    this.hurtLisa(E_DMG[e.st] + (e.kind === 'boss' ? 1 : 0), e.st === 'throw', e)
   }
 
   clash(e) {
@@ -407,6 +486,7 @@ export default class Street extends Phaser.Scene {
       if (ex === 'clash') { this.clash(e); continue }
       if (ex === 'win') {
         e.chain = 0
+        if (e.kind === 'fibber' && e.lied && !e.honest) { e.honest = true; this.floatText(e.x, e.y - 340, 'CAUGHT LYING!', '#e8c08a', 4100, 500); this.time.delayedCall(700, () => e.st !== 'dead' && this.floatText(e.x, e.y - 380, Phaser.Utils.Array.GetRandom(['FINE, NO MORE FIBS!', 'YOU SAW RIGHT THROUGH ME!', 'OKAY, OKAY, THE TRUTH!']), '#ffe9c4', 4100, 500)); if (e.tag) e.tag.setText('HONEST NOW').setColor('#7dffb0') }
         this.floatText(e.x, e.y - 300, 'COUNTER!', '#7dffb0')
         this.hurtEnemy(e, move === 'kick' ? 3 : 2, 90, true)
       } else {
@@ -540,6 +620,17 @@ export default class Street extends Phaser.Scene {
       }
       return Phaser.Utils.Array.GetRandom(['punch', 'punch', 'kick', 'throw'])
     }
+    if (e.kind === 'boss') {
+      const h = this.lisa.habits.slice(-6)
+      if (h.length >= 2 && Math.random() < 0.55) {
+        const counts = { punch: 0, kick: 0, throw: 0 }
+        h.forEach((m) => counts[m]++)
+        const top = Math.max(...Object.values(counts))
+        const favs = Object.keys(counts).filter((m) => counts[m] === top)
+        if (favs.length === 1) return counterOf(favs[0])
+      }
+      return Phaser.Utils.Array.GetRandom(MOVES)
+    }
     if (e.kind === 'reader') {
       const h = this.lisa.habits.slice(-6)
       if (h.length >= 2 && Math.random() < 0.75) {
@@ -551,6 +642,7 @@ export default class Street extends Phaser.Scene {
       }
       return Phaser.Utils.Array.GetRandom(MOVES)
     }
+    if (e.kind === 'fibber') return Phaser.Utils.Array.GetRandom(MOVES)
     const r = Math.random()
     return r < 0.5 ? 'punch' : r < 0.8 ? 'kick' : 'throw'
   }
@@ -565,6 +657,11 @@ export default class Street extends Phaser.Scene {
       if (e.tag) e.tag.setPosition(e.x, e.y - 265 - e.lift).setDepth(e.y + 1)
       if (e.st === 'held') continue
       if (e.st === 'down') {
+        if (e.kind === 'boss') {
+          if (e.hp <= 0) { if (!e.koDone) { e.koDone = true; this.finishBossFight() } continue }
+          if (e.t > 0.9) { e.st = 'free'; e.t = 0; e.sprite.setAngle(0); e.setPose('idle'); e.wait = 0.3 }
+          continue
+        }
         if (e.hp <= 0 && e.t > 0.9) {
           e.st = 'dead'
           if (e.moveTag) e.moveTag.destroy()
@@ -634,7 +731,13 @@ export default class Street extends Phaser.Scene {
           const mv = this.pickMove(e)
           e.st = mv; e.t = 0; e.hitDone = false
           e.setPose('idle')
-          e.tint(e.kind === 'mimic' ? 0xe8dcff : e.kind === 'grudger' && this.grudge ? 0xb8b8c8 : TINT[mv])
+          if (e.kind === 'boss') e.feint = Math.random() < 0.33
+          if (e.kind === 'fibber') {
+            e.lied = !e.honest && Math.random() < 0.5
+            // a lie names one of his two other moves, so neither the call nor its counter is safe to copy
+            e.claim = e.lied ? Phaser.Utils.Array.GetRandom(MOVES.filter((a) => a !== mv)) : mv
+          }
+          e.tint(e.kind === 'mimic' ? 0xe8dcff : e.kind === 'grudger' && this.grudge ? 0xb8b8c8 : e.kind === 'fibber' ? 0xd8c8a8 : TINT[mv])
         }
         continue
       }
@@ -659,9 +762,11 @@ export default class Street extends Phaser.Scene {
           if (Math.abs(gx - e.x) > 4) e.x += Math.sign(gx - e.x) * Math.min(Math.abs(gx - e.x), 260 * dt)
         }
         e.moveTag = e.moveTag || this.add.text(0, 0, '', { fontFamily: 'Bangers', fontSize: '26px', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5)
-        const hidden = e.kind === 'mimic' || e.kind === 'signal' || (e.kind === 'grudger' && this.grudge) // a grudger with a grudge hides his wind-up
+        // a grudger with a grudge hides his wind-up; a boss shows hers late, and one swing in three not at all
+        const hidden = e.kind === 'mimic' || e.kind === 'signal' || (e.kind === 'grudger' && this.grudge) || (e.kind === 'boss' && (e.feint || e.t < 0.25))
         const tag = e.kind === 'mimic' ? 'MIRROR...' : e.alone ? 'GUESS...' : '...'
-        e.moveTag.setText(e.hitDone ? '' : hidden ? tag : e.st.toUpperCase()).setColor(hidden ? (e.kind === 'signal' ? '#ffb36b' : '#e8dcff') : TINT_CSS[e.st]).setPosition(e.x, e.y - (hidden ? 330 : 300)).setDepth(2950)
+        const shown = e.kind === 'fibber' ? e.claim || e.st : e.st
+        e.moveTag.setText(e.hitDone ? '' : hidden ? tag : `${e.kind === 'fibber' ? 'SAYS ' : ''}${shown.toUpperCase()}`).setColor(hidden ? (e.kind === 'signal' ? '#ffb36b' : '#e8dcff') : TINT_CSS[e.kind === 'fibber' ? e.claim || e.st : e.st]).setPosition(e.x, e.y - (hidden ? 330 : 300)).setDepth(2950)
         if (!e.hitDone && e.t > 0.5) {
           e.hitDone = true; e.setPose(e.st); e.tint(null)
           sfx(this, e.st === 'punch' ? 'whoosh' : 'whooshBig')
@@ -672,11 +777,11 @@ export default class Street extends Phaser.Scene {
               this.hurtEnemy(e, 2, 80, true)
             } else {
               if (e.st === 'throw') this.floatText(L.x, L.y - 280, 'THROWN', '#ffe27a')
-              this.hurtLisa(E_DMG[e.st], e.st === 'throw', e)
+              this.hurtLisa(E_DMG[e.st] + (e.kind === 'boss' ? 1 : 0), e.st === 'throw', e)
             }
           }
         }
-        if (MOVES.includes(e.st) && e.t > 0.95) { e.st = 'free'; e.t = 0; e.paired = false; e.alone = false; e.setPose('idle'); e.wait = e.kind === 'grudger' && this.grudge ? 0.25 + Math.random() * 0.3 : 0.7 + Math.random() * 0.7 }
+        if (MOVES.includes(e.st) && e.t > 0.95) { e.st = 'free'; e.t = 0; e.paired = false; e.alone = false; e.setPose('idle'); e.wait = e.kind === 'boss' ? 0.35 + Math.random() * 0.45 : e.kind === 'grudger' && this.grudge ? 0.25 + Math.random() * 0.3 : 0.7 + Math.random() * 0.7 }
       }
     }
   }
@@ -745,6 +850,14 @@ export default class Street extends Phaser.Scene {
   // spawn: [[kind, x, y, delay]]; x is absolute, or relative to the locked camera when `relative`
   startWave(spawn, onClear, relative = false) {
     this.grudge = false
+    if (!loadSave().tipBlitz) {
+      writeSave({ tipBlitz: true })
+      this.time.delayedCall(1200, () => {
+        this.caption.show('New move! Tap forward twice, then punch, to blast a High Note down the lane. It needs a few seconds to recharge. †')
+        this.tipUp = true
+        this.time.delayedCall(5500, () => { if (this.tipUp) { this.tipUp = false; this.caption.hide() } })
+      })
+    }
     this.wave = { onClear: onClear || (() => this.unlock()), count: spawn.length }
     this.time.delayedCall(500, () => this.dropPickup())
     const w = this.wave
@@ -784,7 +897,7 @@ export default class Street extends Phaser.Scene {
 
   // ---------------------------------------------------------------- standoffs
   makeStandoff(cfg, enemy, handlers) {
-    const Cls = cfg.kind === 'mix' ? MixStandoff : cfg.kind === 'elim' ? ElimStandoff : cfg.kind === 'signal' ? SignalStandoff : cfg.kind === 'tree' ? TreeStandoff : cfg.kind === 'bargain' ? BargainStandoff : cfg.kind === 'rematch' ? RematchStandoff : Standoff
+    const Cls = cfg.kind === 'mix' ? MixStandoff : cfg.kind === 'elim' ? ElimStandoff : cfg.kind === 'signal' ? SignalStandoff : cfg.kind === 'tree' ? TreeStandoff : cfg.kind === 'bargain' ? BargainStandoff : cfg.kind === 'rematch' ? RematchStandoff : cfg.kind === 'rulebook' ? RulebookStandoff : Standoff
     return new Cls(this, {
       lisa: this.lisa, enemy, enemyName: cfg.name, pronoun: cfg.pronoun, phases: cfg.phases,
       say: (s, y) => this.caption.show(s, y), onLose: () => this.die(), ...handlers,
@@ -804,7 +917,7 @@ export default class Street extends Phaser.Scene {
 
   // the foe's HUD bar uses the colour of the foe's numbers on the card
   foeColor(kind) {
-    const blue = kind === 'elim' || kind === 'tree' || kind === 'bargain' || kind === 'rematch'
+    const blue = kind === 'elim' || kind === 'tree' || kind === 'bargain' || kind === 'rematch' || kind === 'rulebook'
     const c = blue ? 0x7fd6ff : kind === 'signal' ? 0xffd166 : 0xff9a5c
     this.foeBar.setFillStyle(c)
     this.foeLabel.setColor(blue ? '#7fd6ff' : kind === 'signal' ? '#ffd166' : '#ff9a5c')
@@ -862,7 +975,7 @@ export default class Street extends Phaser.Scene {
     this.so = this.makeStandoff(cfg, s, {
       onPhaseWin: (i) => {
         this.caption.hide()
-        if (i === cfg.phases.length - 1) return this.bossDown()
+        if (i === cfg.phases.length - 1) return this.startBossFight()
         this.bossPhase = i + 1
         writeSave({ level: this.levelId, checkpoint: this.checkpoint, bossPhase: this.bossPhase }) // saved rounds
         this.mode = 'cutscene'
@@ -881,7 +994,7 @@ export default class Street extends Phaser.Scene {
         }))
       },
     })
-    this.time.delayedCall(400, () => this.beginBossPhase(this.bossPhase))
+    this.time.delayedCall(400, () => (this.bossPhase >= cfg.phases.length ? this.startBossFight() : this.beginBossPhase(this.bossPhase)))
   }
 
   beginBossPhase(i) {
@@ -892,6 +1005,58 @@ export default class Street extends Phaser.Scene {
       this.mode = 'standoff'
       this.so.startPhase(i)
     }))
+  }
+
+  // After the last card, the boss fights for real: a brawl with a big health bar, and help at half health
+  startBossFight() {
+    const cfg = this.L.boss, b = this.boss
+    this.bossPhase = cfg.phases.length
+    writeSave({ level: this.levelId, checkpoint: this.checkpoint, bossPhase: this.bossPhase }) // a knockout comes back to the fight
+    this.mode = 'cutscene'
+    this.caption.hide()
+    if (this.so) this.so.end()
+    b.setPose('hurt'); sfx(this, 'hitHeavy')
+    this.time.delayedCall(500, () => b.setPose('idle'))
+    const line = cfg.brawl || { who: cfg.who, text: "Fine, you beat my rules. Let's see you beat me." }
+    this.time.delayedCall(700, () => this.talk(this.once('bossFight', [line]).slice(0, 1), () => {
+      Object.assign(b, { kind: 'boss', st: 'free', t: 0, wait: 0.8, laneOff: 0, hp: BOSS_HP, maxHp: BOSS_HP, summoned: false, koDone: false })
+      b.sprite.setAngle(0)
+      this.enemies = this.enemies.filter((e) => e.st !== 'dead')
+      this.enemies.push(b)
+      this.bossFight = b
+      this.fadeProps(false)
+      this.toFree()
+      if (this.lisa.hp < this.lisa.maxHp) { this.lisa.hp = this.lisa.maxHp; this.floatText(this.lisa.x, this.lisa.y - 280, 'FULL HEALTH', '#7dffb0') }
+      this.cam.flash(160, 255, 95, 162)
+      const t = this.add.text(640, 300, 'FIGHT!', { fontFamily: 'Bangers', fontSize: '110px', color: '#ffd166', stroke: '#2a0f4a', strokeThickness: 10 }).setOrigin(0.5).setScrollFactor(0).setDepth(6000).setScale(0.4)
+      this.tweens.add({ targets: t, scale: 1, duration: 260, ease: 'Back.out' })
+      this.tweens.add({ targets: t, alpha: 0, duration: 400, delay: 900, onComplete: () => t.destroy() })
+      sfx(this, 'go')
+      this.time.delayedCall(600, () => this.dropPickup())
+      this.mode = 'brawl'
+    }))
+  }
+
+  // at half health the boss calls for help, once
+  checkBossFight() {
+    const b = this.bossFight
+    if (!b || b.summoned || b.hp > b.maxHp / 2) return
+    b.summoned = true
+    this.time.delayedCall(250, () => this.floatText(b.x, b.y - 400, 'GET HER!', '#ff6b7a', 4100, 600))
+    const k = this.L.grunt || 'grunt'
+    this.time.delayedCall(500, () => { this.spawn(k, this.locked - 60, 560); this.spawn(k, this.locked + 1340, 630); this.dropPickup() })
+  }
+
+  finishBossFight() {
+    const b = this.bossFight
+    this.bossFight = null
+    this.shots.forEach((sh) => sh.parts.forEach((o) => o.destroy())); this.shots = []
+    if (b.moveTag) { b.moveTag.destroy(); b.moveTag = null }
+    this.enemies.filter((e) => e !== b && e.st !== 'dead').forEach((e) => { e.hp = 0; e.st = 'down'; e.t = 0.6; e.setPose('hurt') })
+    this.enemies = this.enemies.filter((e) => e !== b)
+    this.clearPickups()
+    this.cam.flash(260, 255, 255, 255)
+    this.time.delayedCall(300, () => this.bossDown())
   }
 
   bossDown() {
@@ -1012,6 +1177,21 @@ export default class Street extends Phaser.Scene {
       this.lisa.setPose('strike')
       this.time.delayedCall(400, () => { this.lisa.setPose('idle'); b.face(1); this.floatText(b.x, b.y - 320, 'NO HANDSHAKE', '#c9b8ec', 4100, 700) })
       this.time.delayedCall(1700, () => b.face(-1))
+    } else if (name === 'redlineStrike' && this.boss) {
+      const b = this.boss, st = this.L.art.stage
+      b.setPose('strike')
+      const line = this.add.rectangle(st.x - 150, 330, 300, 9, 0xff2a4a).setOrigin(0, 0.5).setDepth(-650).setScale(0, 1).setAngle(-4)
+      this.tweens.add({ targets: line, scaleX: 1, duration: 450, ease: 'Cubic.out' })
+      this.time.delayedCall(200, () => sfx(this, 'whoosh'))
+      this.time.delayedCall(900, () => b.setPose('idle'))
+    } else if (name === 'redlineSlash') {
+      const sl = this.add.rectangle(286, 40, 500, 6, 0xff2a4a, 0.85).setScrollFactor(0).setDepth(4250).setAngle(-3).setScale(0, 1)
+      this.tweens.add({ targets: sl, scaleX: 1, duration: 160, ease: 'Cubic.out', onComplete: () => this.tweens.add({ targets: sl, alpha: 0, duration: 500, delay: 250, onComplete: () => sl.destroy() }) })
+    } else if (name === 'redlinePen' && this.boss) {
+      const b = this.boss, L = this.lisa
+      const pen = this.add.rectangle(b.x - 40, b.y - 200, 46, 8, 0xff2a4a).setStrokeStyle(2, 0x2a0a10).setDepth(3600)
+      this.tweens.add({ targets: pen, x: L.x + 60, y: L.y - 4, angle: 540, duration: 700, ease: 'Sine.in', onComplete: () => sfx(this, 'block') })
+      this.time.delayedCall(5000, () => this.tweens.add({ targets: pen, alpha: 0, duration: 500, onComplete: () => pen.destroy() }))
     } else if (name === 'tempoAcross') {
       // Tempo flies off to signal from a far mast
       this.postTempo()
@@ -1063,10 +1243,13 @@ export default class Street extends Phaser.Scene {
   update(_, dms) {
     const dt = Math.min(dms / 1000, 0.05)
     this.elapsed += dt
+    this.blitzCd = Math.max(0, this.blitzCd - dt)
     this.dlg.update(dt)
     if (this.mode === 'brawl') {
       this.updateLisa(dt)
       this.updateEnemies(dt)
+      this.updateShots(dt)
+      this.checkBossFight()
       this.checkWave()
       if (!this.wave && this.locked == null) {
         this.checkTriggers()
@@ -1093,7 +1276,10 @@ export default class Street extends Phaser.Scene {
     const foe = this.boss && this.so && this.so.active ? this.so : null
     this.foeBar.setVisible(!!foe); this.foeBack.setVisible(!!foe)
     if (foe) this.foeBar.setScale(Math.max(0, foe.hp / foe.phases[foe.phaseIdx].hp), 1)
-    this.foeLabel.setX(foe ? 990 : 1252)
+    const bf = this.bossFight
+    if (bf) { this.foeBar.setVisible(true); this.foeBack.setVisible(true); this.foeBar.setScale(Math.max(0, bf.hp / bf.maxHp), 1) }
+    this.foeLabel.setX(foe || bf ? 990 : 1252)
+    this.blitzLabel.setColor(this.blitzCd > 0 ? '#6a5a80' : '#ff5fa2').setVisible(this.mode !== 'standoff'); this.blitzPlate.setVisible(this.mode !== 'standoff')
     this.legend.setVisible(!foe) // the brawl triangle does not apply in standoffs
     if (this.mixParts) this.mixParts.forEach((o) => o.setVisible(!foe))
     if (this.habitBars) {
@@ -1117,7 +1303,7 @@ export default class Street extends Phaser.Scene {
       scene: 'Street', level: this.levelId, mode: this.mode, checkpoint: this.checkpoint, locked: this.locked,
       lisa: { x: Math.round(this.lisa.x), y: Math.round(this.lisa.y), hp: this.lisa.hp, st: this.lisa.st, habits: this.lisa.habits.join(',') },
       enemies: this.alive().map((e) => ({ kind: e.kind, x: Math.round(e.x), hp: e.hp, st: e.st })),
-      standoff: so, dialogue: this.dlg.active,
+      standoff: so, dialogue: this.dlg.active, bossFight: this.bossFight ? { hp: this.bossFight.hp, st: this.bossFight.st } : null,
     }
   }
 

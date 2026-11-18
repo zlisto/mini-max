@@ -21,6 +21,8 @@ const WHO = {
   ledger: { name: 'LADY LEDGER', key: 'ledger_portrait', side: 'right', color: '#7dffb0' },
   tatum: { name: 'TATIANA TAT', key: 'tatum_portrait', side: 'right', color: '#5ce1d6' },
   grimes: { name: 'CHAMP GRIMES', key: 'grimes_portrait', side: 'right', color: '#c9b8ec' },
+  ham: { name: 'HAMISH HAM', key: 'ham_portrait', side: 'right', color: '#e8c08a' },
+  redline: { name: 'REDLINE', key: 'redline_portrait', side: 'right', color: '#ff6b7a' },
   dealer: { name: 'DEALER', key: 'dealer_idle', side: 'right', color: '#ff9a5c' },
 }
 
