@@ -11,6 +11,7 @@ import { BOOK_NOTES_W8 } from './mechanism.js'
 import { BOOK_NOTES_W9 } from './fog.js'
 import { BOOK_NOTES_W10 } from './masque.js'
 import { BOOK_NOTES_W11 } from './core.js'
+import { BOOK_NOTES_W12 } from './finale.js'
 
 export const LEVELS = {
   w1: {
@@ -878,6 +879,84 @@ export const LEVELS = {
     end: {
       title: 'BLOCK PARTY CLEARED', notes: BOOK_NOTES_W11, chapter: 'Chapter 13',
       dagger: 'The block party, the crews and what they earn, the coins, the speaker and amp owners, the truck and its dancers, the take scaled to six coins, the rules for winning the pot and the crew hit bonus were made up for this game. The cards follow Definition 258.2, Examples 259.1, 260.1 and 265.1, and Exercises 259.3 and 261.1.',
+      next: { level: 'w12', label: 'Next: The Grand Finale ▶' },
+    },
+  },
+  w12: {
+    id: 'w12', title: 'THE GRAND FINALE', chapter: 'Chapters 14 and 15: The Shapley Value and the Nash Solution', music: 'level_12', width: 4400, page: 12, skin: 'lisap',
+    outfits: ['lisa', 'lisag', 'lisar', 'lisap'], juno: true,
+    art: {
+      far: 'finale_far', mids: ['finale_mid_a'], ground: 'finale_ground', overlap: 1,
+      stage: { key: 'finale_stage', x: 3900, scale: 1.0 },
+      fg: [['fg_wedge', 40, 0.8], ['fg_lightrig', 1420, 0.7], ['fg_lightrig', 2860, 0.7], ['fg_wedge', 3000, 0.9]],
+    },
+    grunt: 'reader', habitMeter: false, talkKind: 'reader',
+    intro: [
+      { who: 'tempo', text: 'This is it, the Grand Finale. Juno and the last page are up on that stage, and the whole city is watching.' },
+      { who: 'zero', cue: 'zeroScreen', text: "Welcome to my Grand Finale, my dears. Tonight you'll learn the only rule that matters." },
+      { who: 'zero', text: 'The strongest takes it all, and everyone else is merely the warm-up act.' },
+      { who: 'lisa', cue: 'zeroScreenOff', text: "Juno's up there. I'm getting her back, and then we'll see who takes what." },
+      { who: 'tempo', text: 'Oh, and all four of your outfits made it. Press O to switch whenever you like.' },
+    ],
+    readerTalk: [
+      { who: 'tempo', text: 'Every rival from the Tour came back for an encore. Read each one the way you learned.' },
+      { who: 'lisa', text: "I've beaten all of them once already, and I remember every trick they've got." },
+    ],
+    triggers: [
+      { id: 'wave1', x: 560, cam: 0, spawn: [['reader', 1420, 560, 0], ['mimic', 1180, 630, 1.0], ['dealer', 1340, 560, 1.8], ['grunt', 1300, 600, 2.8]] },
+      { id: 'wave2', x: 1750, cam: 1250, spawn: [['fogger', 2620, 560, 0], ['masker', 2760, 630, 0.8], ['crewa', 1100, 600, 2.0], ['masker', 2700, 590, 3.4], ['masker', 1020, 560, 4.6], ['crewa', 2680, 600, 5.4]] },
+      { id: 'elite', x: 2800, cam: 2300, standoff: 'elite' },
+      { id: 'boss', x: 3620, cam: 4400 - 1280, standoff: 'boss' },
+    ],
+    elite: {
+      prefix: 'marquee', name: 'Marquee', label: 'MARQUEE', who: 'marquee', kind: 'finale', pronoun: 'he',
+      phases: [{ hp: 3, cards: [{ mode: 'margin' }, { mode: 'shapley' }, { mode: 'seller', book: true }] }],
+      intro: [
+        { who: 'marquee', text: "Showtime, pink! Places, places! Juno's in my dressing room, and you're on in five." },
+        { who: 'marquee', text: 'Split the band\'s take so nobody walks out, or she stays in there till the encore.' },
+        { who: 'tempo', text: 'Pay each player for what they bring. Line them up and watch what every arrival adds.' },
+        { who: 'tempo', text: 'Average that over every order they could arrive in, and you get the Shapley value.' },
+      ],
+      outro: [
+        { who: 'marquee', text: "Shares add up and nobody's walking, so the curtain's up. Fine, fine, the dressing room's open!" },
+        { who: 'juno', cue: 'junoFree', text: 'Lisa! I sold you out on opening night, and you still came for me.' },
+        { who: 'lisa', text: 'We both did. This time we play it together, and we read the game first.' },
+        { who: 'tempo', text: 'Zero is up on his throne with the last page. Stay close, Juno.' },
+      ],
+    },
+    boss: {
+      prefix: 'zerof', name: 'Zero', label: 'ZERO', who: 'zero', kind: 'finale', pronoun: 'he', standY: 520, healFull: true, throne: { x: 3900, y: 452 },
+      phases: [
+        { hp: 2, cards: [{ mode: 'weighted', book: true }, { mode: 'axiom' }] },
+        { hp: 2, cards: [{ mode: 'nash' }, { mode: 'risk' }] },
+      ],
+      phaseIntros: [
+        [
+          { who: 'zero', text: 'So you freed the songbird. How touching, my dears. Now let me show you what the strongest is owed.' },
+          { who: 'zero', text: 'Big Top holds the most seats in my house. Surely the biggest player deserves the whole pot.' },
+          { who: 'tempo', text: 'Being big only counts when you make the difference. Look for the orders where Big Top tips the vote.' },
+        ],
+        [
+          { who: 'zero', text: "Very well. Let's bargain, you and I, and see who blinks first." },
+          { who: 'tempo', text: "Find the deal neither of you would risk a breakdown to push past. Nash's solution picks that one." },
+          { who: 'juno', text: 'Watch how badly he wants this deal, Lisa. A bargain is about more than who shouts loudest.' },
+        ],
+      ],
+      taunt: { who: 'zero', text: 'A share instead of the whole pot? I call that a rounding error. Encore, ensemble! Entertain our guests.' },
+      brawl: { who: 'zero', text: "Enough arithmetic. Let's settle this the old-fashioned way." },
+      interludes: [[['reader', 1180, 560, 0], ['crewb', 1230, 630, 0.9], ['fogger', -140, 600, 1.6], ['mimic', -100, 560, 2.6]]],
+      outro: [
+        { who: 'zero', text: 'Impossible! I was the strongest act in the house!' },
+        { who: 'lisa', text: 'You told me somebody has to lose for you to win. Tonight everyone on this stage got paid.' },
+        { who: 'juno', cue: 'duet', text: "That's our setlist, all twelve pages. Shall we sing it the way we wrote it?" },
+        { who: 'zero', text: 'Nobody lost, and the house is still on its feet? How very unsettling, my dears.' },
+        { who: 'tempo', cue: 'chant', text: "Hear that? The whole stadium's chanting MINI MAX, and I'm pretty sure they mean both of you." },
+        { who: 'lisa', text: 'I started this Tour playing it safe, all on my own. Mini Max sounds better as a duet.' },
+      ],
+    },
+    end: {
+      title: 'GRAND FINALE CLEARED', notes: BOOK_NOTES_W12, chapter: 'Chapters 14 and 15', finale: true, credits: 'Mini Max, a game from the Arcade of Alexandria, built on A Course in Game Theory by Martin J. Osborne and Ariel Rubinstein.',
+      dagger: "The stadium, the band, the coins, the seats, the three acts, the happiness tables, Marquee, the encore of rivals, the outfit switch and Juno at Lisa's side were made up for this game. The cards follow Definition 291.2, Examples 294.1, 294.3 and 295.3, the axioms of Proposition 293.1, and Propositions 302.1 and 304.1.",
       next: null,
     },
   },

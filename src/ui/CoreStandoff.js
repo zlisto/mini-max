@@ -18,6 +18,8 @@ const RESUME = {} // cards won per foe and phase, so a knockout doesn't replay t
 const SEEN_EMPTY = {} // per foe: false once a majority or veto card held, true once an empty core was called
 const PINK = '#ff5fa2', BLUE = '#7fd6ff', GOLD = 0xffd166, CREAM = '#ecdcc8', DIM = '#7a6a90', ROSE = '#ff9a8a'
 
+export { nw, coins }
+
 export class CoreStandoff {
   constructor(scene, { lisa, enemy, enemyName, phases, onPhaseWin, onLose, say }) {
     Object.assign(this, { scene, lisa, enemy, enemyName, phases, onPhaseWin, onLose, say })
@@ -45,6 +47,8 @@ export class CoreStandoff {
     this.scene.tweens.add({ targets: this.c, alpha: 1, duration: 250 })
     sfx(this.scene, 'freeze')
   }
+
+  makeCard(cfg) { return makeCoreCard(cfg) }
 
   // ---- names --------------------------------------------------------------
   gname(m) { return groupName(m, this.card.g) }
@@ -79,7 +83,7 @@ export class CoreStandoff {
     const cfg = this.ph.cards[Math.min(this.hits, this.ph.cards.length - 1)]
     let use = again ? { ...cfg, book: false } : cfg
     if (use.mode === 'veto' && SEEN_EMPTY[this.enemyName] === false) use = { ...use, holds: false }
-    this.card = makeCoreCard(use)
+    this.card = this.makeCard(use)
     this.mode = this.card.mode
     this.steps = this.stepsFor(this.card)
     this.done = []
@@ -98,7 +102,7 @@ export class CoreStandoff {
       majority: 'Any two crews can run the party without the third. Can any split keep all three together?',
       veto: 'Read the rule for winning the pot. Can any split keep everyone together?',
     }
-    this.say(again ? "Here's a fresh one. Start from the top." : lines[this.mode], 16)
+    this.say(again ? "Here's a fresh one. Start from the top." : (this.dealLine ? this.dealLine() : lines[this.mode]), 16)
   }
 
   beginStep(i) {
@@ -124,7 +128,7 @@ export class CoreStandoff {
     this.txt = txt
     const c = this.card
     const titles = { walkout: 'WHO WALKS OUT?', split: 'SPLIT THE TAKE', market: 'SPEAKERS AND AMPS', owner: 'THE TRUCK AND THE DANCERS', majority: 'ANY TWO CREWS', veto: 'WHO CAN WIN THE POT?' }
-    this.c.add(txt(X + W / 2, Y + 20, titles[this.mode], { fontFamily: 'Bangers', fontSize: '26px', color: '#ffd166' }).setOrigin(0.5))
+    this.c.add(txt(X + W / 2, Y + 20, this.titleFor ? this.titleFor() : titles[this.mode], { fontFamily: 'Bangers', fontSize: '26px', color: '#ffd166' }).setOrigin(0.5))
     const intro = {
       walkout: "Each line gives a group's worth, what it earns on its own. † Mural's split of the take is in pink.",
       split: `The block earns ${c.g.T} coins when all three crews stay together. Each line gives a group's worth, what it earns on its own. †`,
@@ -133,12 +137,14 @@ export class CoreStandoff {
       majority: 'The block earns 6 when all three crews stay. Any two crews earn the same on their own, and a crew alone earns nothing. †',
       veto: 'Read the rule in the box below. A winning group takes all 6 coins, and a losing group gets nothing. †',
     }[this.mode]
-    this.c.add(txt(X + 20, Y + 40, intro, { fontSize: '14px', color: CREAM }))
+    this.c.add(txt(X + 20, Y + 40, this.introFor ? this.introFor() : intro, { fontSize: '14px', color: CREAM }))
     this.drawWorths(X, Y + 84, W)
     // steps already answered
     let y = Y + 176
-    const lastBad = this.done.map((d) => d.startsWith('✗')).lastIndexOf(true)
-    this.done.forEach((d, k) => { const bad = d.startsWith('✗'); if (bad && k !== lastBad) return; const tt = txt(X + 20, y, bad ? d : `✓ ${d}`, { fontSize: '14px', color: bad ? '#ff8a8a' : '#7dffb0' }); this.c.add(tt); y += tt.height + 4 })
+    const bads = this.done.map((d, k) => (d.startsWith('✗') ? k : -1)).filter((k) => k >= 0)
+    const keep = new Set(bads.slice(-1))
+    if (bads.length > 1 && this.done[bads[bads.length - 1]].includes('card is spent')) keep.add(bads[bads.length - 2])
+    this.done.forEach((d, k) => { const bad = d.startsWith('✗'); if (bad && !keep.has(k)) return; const tt = txt(X + 20, y, bad ? d : `✓ ${d}`, { fontSize: '14px', color: bad ? '#ff8a8a' : '#7dffb0' }); this.c.add(tt); y += tt.height + 4 })
     const st = this.steps[this.step]
     let bottom = y
     if (!this.stage) {
@@ -148,7 +154,7 @@ export class CoreStandoff {
       if (st.type === 'split') { this.drawSplit(X, y2, W); bottom = y2 + 150 } else { this.drawPick(X, y2 + 18, W, st); bottom = y2 + 18 + this.pickRows * ((st.wide ? 38 : 32) + 6) - 8 }
     }
     if (this.note) this.c.add(txt(X + 20, bottom + 8, this.note, { fontSize: '14px', color: '#ffd166', wordWrap: { width: W - 40 } }))
-    const hint = st.type === 'split' ? 'LEFT/RIGHT choose who · UP/DOWN give or take a coin · SPACE lock it' : 'LEFT/RIGHT choose · SPACE play it'
+    const hint = st.type === 'split' ? ((this.splitHint && this.splitHint()) || 'LEFT/RIGHT choose who · UP/DOWN give or take a coin · SPACE lock it') : 'ARROWS choose · SPACE play it (one try per card)'
     this.hint = txt(X + W / 2, Y + H - 13, hint, { color: CREAM, fontSize: '14px' }).setOrigin(0.5).setVisible(!this.stage)
     this.c.add(this.hint)
     this.cardBottom = Y + H
@@ -237,7 +243,7 @@ export class CoreStandoff {
       hitDn.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.give(i, -1))
     }
     const left = this.left()
-    t(X + W / 2 - 70, y + 130, left > 0 ? `Coins left to hand out: ${left}` : 'Every coin is handed out.', { fontSize: '15px', color: left > 0 ? CREAM : '#7dffb0' })
+    t(X + W / 2 - 70, y + 130, (this.leftText && this.leftText(left)) || (left > 0 ? `Coins left to hand out: ${left}` : 'Every coin is handed out.'), { fontSize: '15px', color: left > 0 ? CREAM : '#7dffb0' })
     const lock = s.add.rectangle(X + W - 90, y + 130, 110, 30, left === 0 ? 0x4a3a1a : 0x1a1408).setStrokeStyle(2, left === 0 ? 0xffffff : 0x5e4f3e)
     lock.setInteractive({ useHandCursor: true }).on('pointerdown', () => { if (!this.stage && this.waiting) { this.touched = true; this.act() } })
     this.c.add(lock)
@@ -264,10 +270,12 @@ export class CoreStandoff {
     if (st.type === 'split') {
       if (this.left() > 0) { this.hint.setColor('#ffd166'); this.say(`Hand out all ${nw(this.card.g.T)} coins before you lock it.`, 16); sfx(this.scene, 'hover'); return }
       const key = `${this.step}:${this.x.join(',')}`
-      if (this.failed.has(key)) { sfx(this.scene, 'block'); this.say('That exact split already lost a group. Change something first.', 16); return }
+      if (this.failed.has(key)) { sfx(this.scene, 'block'); this.say('You already tried that exact split. Change something first.', 16); return }
+      if (this.exactSplit) { if (this.exactSplit(key)) return } else {
       const out = walkout(this.card.g.v, this.x, this.card.g.n)
       if (out != null) return this.wrongSplit(key, out)
       if (this.mode === 'owner' && this.x.slice(1).some((k) => k !== this.card.cap)) return this.wrongSplit(key, null)
+      }
       const fb = this.splitRight()
       this.done.push(fb.done)
       if (this.step < this.steps.length - 1) { this.note = fb.note; this.say(fb.line, 16); this.beginStep(this.step + 1); return }
@@ -450,7 +458,7 @@ export class CoreStandoff {
     sfx(sc, 'punished')
     this.lisa.hp -= dmg
     this.lisa.flash(); this.lisa.setPose('hurt')
-    sc.floatText(this.lisa.x + 110, this.lisa.y - 150, `-${dmg}`, '#ff6b7a', 4400)
+    sc.floatText(this.lisa.x + 40, this.lisa.y - 300, `-${dmg}`, '#ff6b7a', 4400)
     sc.cameras.main.shake(100, 0.004)
     sc.time.delayedCall(900, () => {
       this.lisa.setPose('idle')
@@ -460,7 +468,7 @@ export class CoreStandoff {
         this.redeal = false
         this.stage = 'redeal'
         const lw = this.lastWrong.length > 30 ? 'That reason' : this.lastWrong
-        this.done.push(lw.startsWith('Two ') ? `✗ ${lw}. That card is spent, so a fresh one starts over.` : `✗ ${lw === 'That reason' ? 'That reason' : `"${lw}"`} was wrong, so this card is spent. A fresh one starts over.`)
+        this.done.push(/^(Two|A wrong) /.test(lw) ? `✗ ${lw}, so this card is spent. A fresh one starts over.` : `✗ ${lw === 'That reason' ? 'That reason' : `"${lw}"`} was wrong, so this card is spent. A fresh one starts over.`)
         this.stageAt = sc.time.now
         this.draw()
         this.prompt.setText('SPACE: new card').setVisible(true)
@@ -560,7 +568,7 @@ export class CoreStandoff {
     if (this.stage === 'redeal') { this.deal(true); return }
     this.dealtAt = -1e9
     const st = this.steps[this.step]
-    if (st.type === 'split') this.x = (this.mode === 'owner' ? this.card.g.core.find((x) => x.slice(1).every((k) => k === this.card.cap)) : this.card.g.core[0]).slice()
+    if (st.type === 'split') this.x = (this.target ? this.target() : this.mode === 'owner' ? this.card.g.core.find((x) => x.slice(1).every((k) => k === this.card.cap)) : this.card.g.core[0]).slice()
     else this.cursor = st.opts.indexOf(st.ans)
     this.touched = true
     this.act()

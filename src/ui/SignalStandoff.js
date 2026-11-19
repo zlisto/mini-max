@@ -307,7 +307,7 @@ export class SignalStandoff {
     sfx(sc, 'punished')
     this.lisa.hp -= dmg
     this.lisa.flash(); this.lisa.setPose('hurt')
-    sc.floatText(this.lisa.x + 110, this.lisa.y - 150, `-${dmg}`, '#ff6b7a', 4400)
+    sc.floatText(this.lisa.x + 40, this.lisa.y - 300, `-${dmg}`, '#ff6b7a', 4400)
     sc.cameras.main.shake(100, 0.004)
     sc.time.delayedCall(900, () => {
       this.lisa.setPose('idle')

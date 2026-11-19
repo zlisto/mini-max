@@ -29,6 +29,7 @@ const WHO = {
   cameo: { name: 'CONTESSA CAMEO', key: 'cameo_portrait', side: 'right', color: '#ff8a7a' },
   mural: { name: 'MURAL', key: 'mural_portrait', side: 'right', color: '#ffb36b' },
   corazon: { name: 'QUEEN CORAZON', key: 'corazon_portrait', side: 'right', color: '#ffd166' },
+  marquee: { name: 'MARQUEE', key: 'marquee_portrait', side: 'right', color: '#e8e8f0' },
   dealer: { name: 'DEALER', key: 'dealer_idle', side: 'right', color: '#ff9a5c' },
 }
 

@@ -12,6 +12,7 @@ import { RulebookStandoff } from '../ui/RulebookStandoff.js'
 import { FogStandoff } from '../ui/FogStandoff.js'
 import { MasqueStandoff } from '../ui/MasqueStandoff.js'
 import { CoreStandoff } from '../ui/CoreStandoff.js'
+import { FinaleStandoff } from '../ui/FinaleStandoff.js'
 import { BEATS, MOVES } from '../data/games.js'
 import { LEVELS } from '../data/levels.js'
 import { loadSave, writeSave } from '../systems/save.js'
@@ -64,8 +65,12 @@ export default class Street extends Phaser.Scene {
     this.cameras.main.fadeIn(400)
     this.buildWorld()
     this.enemies = []
-    this.lisa = new Fighter(this, this.L.skin || 'lisa', 200, 590, { hp: 20 })
+    const keptOutfit = this.L.outfits && this.registry.get('outfit')
+    this.lisa = new Fighter(this, (keptOutfit && this.L.outfits.includes(keptOutfit) && keptOutfit) || this.L.skin || 'lisa', 200, 590, { hp: 20 })
     Object.assign(this.lisa, { st: 'free', t: 0, habits: [], combo: 0, lastStrikeEnd: -9, invuln: 0, shield: 0, best: 0 })
+    this.juno = null
+    this.junoDuet = false
+    if (this.L.juno && this.checkpoint >= 3) this.time.delayedCall(50, () => this.freeJuno(false))
     this.pickups = []
     this.aura = this.add.ellipse(0, 0, 150, 40).setStrokeStyle(5, 0x5ce1d6).setVisible(false)
     this.tempo = this.add.image(120, 300, 'tempo_sprite').setScale(0.3).setDepth(2900)
@@ -153,12 +158,12 @@ export default class Street extends Phaser.Scene {
     const d = 5000
     this.habitBars = null // per level (the scene object is reused between levels)
     this.add.rectangle(0, 676, 1280, 44, 0x0b0614, 0.75).setOrigin(0, 0).setScrollFactor(0).setDepth(d)
-    this.add.image(28, 698, `${this.L.skin || 'lisa'}_portrait`).setDisplaySize(40, 40).setScrollFactor(0).setDepth(d)
+    this.lisaPortrait = this.add.image(28, 698, `${this.lisa.prefix}_portrait`).setDisplaySize(40, 40).setScrollFactor(0).setDepth(d)
     this.add.text(56, 686, 'LISA', { fontFamily: 'Bangers', fontSize: '24px', color: '#ff5fa2' }).setScrollFactor(0).setDepth(d)
     this.add.rectangle(112, 698, 260, 16, 0x3a1a5a).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d)
     this.hpBar = this.add.rectangle(112, 698, 260, 16, 0xff5fa2).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d)
     const legendX = this.L.habitMeter ? 775 : 640
-    this.legend = this.add.text(legendX, 698, 'Kick beats Punch  ·  Punch beats Throw  ·  Throw beats Kick †', {
+    this.legend = this.add.text(legendX, 698, `Kick beats Punch  ·  Punch beats Throw  ·  Throw beats Kick †${this.L.outfits ? '  ·  O: outfit' : ''}`, {
       fontFamily: 'Nunito', fontStyle: '800', fontSize: '15px', color: '#e8dcff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(d)
     if (this.L.habitMeter) {
@@ -605,6 +610,7 @@ export default class Street extends Phaser.Scene {
         from: 0, to: 1, duration: 520, ease: 'Sine.inOut',
         onUpdate: (tw) => { const v = tw.getValue(); e.x = x0 + (x1 - x0) * v; e.lift = Math.sin(v * Math.PI) * 300; e.sprite.setAngle(-360 * v * L.facing) },
         onComplete: () => {
+          if (!e.sprite || !e.sprite.active || e.st === 'dead') return
           e.lift = 0; e.sprite.setAngle(0)
           this.cam.shake(160, 0.008)
           this.spark(e.x, e.y - 40, 0xffe27a)
@@ -985,7 +991,7 @@ export default class Street extends Phaser.Scene {
 
   // ---------------------------------------------------------------- standoffs
   makeStandoff(cfg, enemy, handlers) {
-    const Cls = cfg.kind === 'mix' ? MixStandoff : cfg.kind === 'elim' ? ElimStandoff : cfg.kind === 'signal' ? SignalStandoff : cfg.kind === 'tree' ? TreeStandoff : cfg.kind === 'bargain' ? BargainStandoff : cfg.kind === 'rematch' ? RematchStandoff : cfg.kind === 'rulebook' ? RulebookStandoff : cfg.kind === 'fog' ? FogStandoff : cfg.kind === 'masque' ? MasqueStandoff : cfg.kind === 'core' ? CoreStandoff : Standoff
+    const Cls = cfg.kind === 'mix' ? MixStandoff : cfg.kind === 'elim' ? ElimStandoff : cfg.kind === 'signal' ? SignalStandoff : cfg.kind === 'tree' ? TreeStandoff : cfg.kind === 'bargain' ? BargainStandoff : cfg.kind === 'rematch' ? RematchStandoff : cfg.kind === 'rulebook' ? RulebookStandoff : cfg.kind === 'fog' ? FogStandoff : cfg.kind === 'masque' ? MasqueStandoff : cfg.kind === 'core' ? CoreStandoff : cfg.kind === 'finale' ? FinaleStandoff : Standoff
     return new Cls(this, {
       lisa: this.lisa, enemy, enemyName: cfg.name, pronoun: cfg.pronoun, phases: cfg.phases,
       say: (s, y) => this.caption.show(s, y), onLose: () => this.die(), ...handlers,
@@ -1005,7 +1011,7 @@ export default class Street extends Phaser.Scene {
 
   // the foe's HUD bar uses the colour of the foe's numbers on the card
   foeColor(kind) {
-    const blue = kind === 'elim' || kind === 'tree' || kind === 'bargain' || kind === 'rematch' || kind === 'rulebook' || kind === 'fog' || kind === 'masque' || kind === 'core'
+    const blue = kind === 'elim' || kind === 'tree' || kind === 'bargain' || kind === 'rematch' || kind === 'rulebook' || kind === 'fog' || kind === 'masque' || kind === 'core' || kind === 'finale'
     const c = blue ? 0x7fd6ff : kind === 'signal' ? 0xffd166 : 0xff9a5c
     this.foeBar.setFillStyle(c)
     this.foeLabel.setColor(blue ? '#7fd6ff' : kind === 'signal' ? '#ffd166' : '#ff9a5c')
@@ -1069,7 +1075,7 @@ export default class Street extends Phaser.Scene {
         this.mode = 'cutscene'
         s.setPose('hurt')
         sfx(this, 'hitHeavy')
-        this.tweens.add({ targets: s, x: this.locked + 1000, y: cfg.standY, duration: 600 })
+        this.tweens.add({ targets: s, x: cfg.throne ? cfg.throne.x : this.locked + 1000, y: cfg.throne ? cfg.throne.y : cfg.standY, duration: 600 })
         this.time.delayedCall(700, () => this.talk([cfg.taunt], () => {
           this.mode = 'brawl'
           this.fadeProps(false)
@@ -1089,6 +1095,21 @@ export default class Street extends Phaser.Scene {
   beginBossPhase(i) {
     this.mode = 'cutscene'
     this.clearPickups()
+    const th = this.L.boss.throne
+    if (th) {
+      // he holds court from the throne, then steps down to deal
+      const b = this.boss
+      this.tweens.killTweensOf(b)
+      if (i === 0) { b.x = th.x; b.y = th.y }
+      else this.tweens.add({ targets: b, x: th.x, y: th.y, duration: 500 })
+      b.face(-1)
+      this.toFree()
+      this.time.delayedCall(i === 0 ? 300 : 600, () => this.talk(this.once(`boss${i}`, this.L.boss.phaseIntros[i]), () => {
+        this.placeForStandoff(b)
+        this.time.delayedCall(950, () => { this.mode = 'standoff'; this.so.startPhase(i) })
+      }))
+      return
+    }
     this.placeForStandoff(this.boss)
     this.time.delayedCall(950, () => this.talk(this.once(`boss${i}`, this.L.boss.phaseIntros[i]), () => {
       this.mode = 'standoff'
@@ -1331,6 +1352,17 @@ export default class Street extends Phaser.Scene {
           sfx(this, 'hover')
         })
       }
+    } else if (name === 'duet') {
+      // Juno steps up beside Lisa, and notes rise as they sing
+      this.junoDuet = true
+      this.lisa.face(1)
+      for (let k = 0; k < 10; k++) this.time.delayedCall(400 + k * 300, () => { const t = this.floatText(this.lisa.x + 30 + ((k * 53) % 70), this.lisa.y - 250, k % 3 ? '♪' : '♫', ['#ff5fa2', '#5ce1d6', '#ffd166'][k % 3], 3600, 600); t.setScale(0.9) })
+    } else if (name === 'chant') {
+      const spots = [[-520, 320], [-330, 380], [-150, 300], [40, 360], [230, 310], [420, 380], [-430, 420], [-240, 330], [-60, 410], [140, 300], [330, 420], [520, 340]]
+      spots.concat(spots).forEach(([dx, y], k) => this.time.delayedCall(k * 240, () => { const t = this.floatText(cx + dx, y, k % 2 ? 'MAX!' : 'MINI!', ['#ff5fa2', '#ffd166', '#5ce1d6', '#ff8a7a'][k % 4], 3600, 600); t.setScale(1.2) }))
+      sfx(this, 'sting')
+    } else if (name === 'junoFree') {
+      this.freeJuno(true)
     } else if (name === 'zeroSweep') {
       // a ghostly Zero steps out, sweeps the table, and fades
       const z = this.add.image(cx + 260, 600, 'zero_idle').setOrigin(0.5, 1).setScale(0.5).setAlpha(0).setFlipX(true).setDepth(3500)
@@ -1339,6 +1371,28 @@ export default class Street extends Phaser.Scene {
       this.tweens.add({ targets: z, alpha: 0, duration: 700, delay: 4500, onComplete: () => z.destroy() })
       sfx(this, 'sting')
     }
+  }
+
+  // Juno, freed at the finale, follows a step behind Lisa (she doesn't fight †)
+  freeJuno(show) {
+    if (this.juno) return
+    const L = this.lisa
+    this.juno = new Fighter(this, 'juno', L.x - (show ? 420 : 170), L.y, { artFacing: -1, hp: 1 })
+    this.juno.face(1)
+    if (show) { this.floatText(L.x - 170, L.y - 330, 'JUNO IS FREE!', '#5ce1d6', 4100, 900); sfx(this, 'sting') }
+  }
+
+  // the finale's outfit switch: O cycles through all four looks †
+  switchOutfit() {
+    const all = this.L.outfits, L = this.lisa
+    const i = (all.indexOf(L.prefix) + 1) % all.length
+    L.prefix = all[i]
+    L.setPose(L.pose)
+    this.lisaPortrait.setTexture(`${L.prefix}_portrait`)
+    this.registry.set('outfit', L.prefix)
+    if (this.outfitPop) this.outfitPop.destroy()
+    this.outfitPop = this.floatText(L.x, L.y - 330, { lisa: 'BLACK LEATHER', lisag: 'GREY HOODIE', lisar: 'RED COAT', lisap: 'PINK FRINGE' }[L.prefix], '#ffd166', 4100, 300)
+    sfx(this, 'hover')
   }
 
   postTempo() {
@@ -1355,6 +1409,7 @@ export default class Street extends Phaser.Scene {
     this.elapsed += dt
     this.blitzCd = Math.max(0, this.blitzCd - dt)
     this.dlg.update(dt)
+    if (this.L.outfits && this.mode === 'brawl' && this.presses.take('KeyO')) this.switchOutfit()
     if (this.mode === 'brawl') {
       this.updateLisa(dt)
       this.updateEnemies(dt)
@@ -1373,6 +1428,15 @@ export default class Street extends Phaser.Scene {
     if (L.invuln > 0 && L.st !== 'flip') L.sprite.setAlpha(Math.sin(this.elapsed * 40) > 0 ? 1 : 0.4); else L.sprite.setAlpha(1)
     this.enemies.forEach((e) => e.st !== 'dead' && e.sync(dt))
     if (this.boss) this.boss.sync(dt)
+    if (this.juno) {
+      const J = this.juno, left = (this.locked ?? this.cam.scrollX) + 60
+      const tx = this.junoDuet ? L.x + 130 : L.x - 170 >= left ? L.x - 170 : L.x + 150
+      const dx = (tx - J.x) * Math.min(1, dt * 3)
+      J.x += dx; J.y += (L.y - 14 - J.y) * Math.min(1, dt * 3)
+      J.face(this.junoDuet ? -1 : Math.abs(dx) > 0.6 ? Math.sign(dx) : L.x >= J.x ? 1 : -1); J.sync(dt)
+      const hide = this.mode === 'standoff' && this.so && this.so.active
+      J.sprite.setAlpha(Phaser.Math.Linear(J.sprite.alpha, hide ? 0 : 1, Math.min(1, dt * 6))); J.shadow.setAlpha(J.sprite.alpha * 0.38)
+    }
     const posted = this.tempoPost && !this.tempoBusy
     const tx = posted ? this.cam.scrollX + 1160 : L.x - 80 * L.facing
     const ty = (posted ? 210 : this.mode === 'standoff' ? L.y - 210 : L.y - 300) + Math.sin(this.elapsed * 3) * 8
