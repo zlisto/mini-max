@@ -25,6 +25,8 @@ const WHO = {
   redline: { name: 'REDLINE', key: 'redline_portrait', side: 'right', color: '#ff6b7a' },
   smokey: { name: 'SMOKEY BLUE', key: 'smokey_portrait', side: 'right', color: '#7fb4ff' },
   velma: { name: 'VELMA VAGUE', key: 'velma_portrait', side: 'right', color: '#c9a8ff' },
+  domino: { name: 'DOMINO', key: 'domino_portrait', side: 'right', color: '#8fa8ff' },
+  cameo: { name: 'CONTESSA CAMEO', key: 'cameo_portrait', side: 'right', color: '#ff8a7a' },
   dealer: { name: 'DEALER', key: 'dealer_idle', side: 'right', color: '#ff9a5c' },
 }
 

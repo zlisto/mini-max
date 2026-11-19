@@ -10,6 +10,7 @@ import { BargainStandoff } from '../ui/BargainStandoff.js'
 import { RematchStandoff } from '../ui/RematchStandoff.js'
 import { RulebookStandoff } from '../ui/RulebookStandoff.js'
 import { FogStandoff } from '../ui/FogStandoff.js'
+import { MasqueStandoff } from '../ui/MasqueStandoff.js'
 import { BEATS, MOVES } from '../data/games.js'
 import { LEVELS } from '../data/levels.js'
 import { loadSave, writeSave } from '../systems/save.js'
@@ -178,6 +179,28 @@ export default class Street extends Phaser.Scene {
     this.foeLabel = this.add.text(1252, 686, '', { fontFamily: 'Bangers', fontSize: '24px', color: '#ff9a5c' }).setOrigin(1, 0).setScrollFactor(0).setDepth(d)
     this.foeBack = this.add.rectangle(1000, 698, 160, 16, 0x3a1a5a).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d).setVisible(false)
     this.foeBar = this.add.rectangle(1000, 698, 160, 16, 0xff9a5c).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d).setVisible(false)
+    // the masquerade's guest list: how many of each type are still behind a mask
+    this.maskHidden = { punch: 0, kick: 0, throw: 0 }
+    this.maskHud = this.add.text(640, 134, '', { fontFamily: 'Bangers', fontSize: '28px', color: '#ffd6c8', stroke: '#000', strokeThickness: 5, backgroundColor: '#140814cc', padding: { x: 12, y: 4 } }).setOrigin(0.5).setScrollFactor(0).setDepth(d).setVisible(false)
+  }
+
+  updateMaskHud() {
+    const h = this.maskHidden, parts = MOVES.filter((m) => h[m] > 0).map((m) => `${h[m]} ${m.toUpperCase()}`)
+    const txt = parts.length ? `STILL MASKED: ${parts.join(' · ')}` : ''
+    if (txt !== this.maskHud.text && txt) this.tweens.add({ targets: this.maskHud, scale: { from: 1.25, to: 1 }, duration: 350, ease: 'Back.out' })
+    this.maskHud.setText(txt).setVisible(!!txt)
+  }
+
+  // a masker's mask falls only when he goes down; until then the tally is all Lisa has to go on
+  unmask(e) {
+    if (e.unmasked) return
+    e.unmasked = true
+    this.maskHidden[e.mtype] = Math.max(0, this.maskHidden[e.mtype] - 1)
+    this.updateMaskHud()
+    const name = { punch: 'PUNCHER', kick: 'KICKER', throw: 'THROWER' }[e.mtype]
+    if (e.tag) e.tag.setText(name).setColor(TINT_CSS[e.mtype])
+    this.unmaskN = (this.unmaskN || 0) + 1
+    this.floatText(e.x, e.y - 370 - (this.unmaskN % 3) * 30, `UNMASKED: ${name}`, '#ffd6c8', 4100, 500)
   }
 
   // Tempo's caption: a box that grows to fit its text; y defaults to the top-right slot
@@ -214,9 +237,9 @@ export default class Street extends Phaser.Scene {
 
   // ---------------------------------------------------------------- enemies
   spawn(kind, x, y) {
-    const prefix = kind === 'dealer' ? 'dealer' : kind === 'mimic' ? 'mimic' : kind === 'signal' ? 'signal' : kind === 'bluffer' ? 'bluffer' : kind === 'holdout' ? 'holdout' : kind === 'grudger' ? 'grudger' : kind === 'fibber' ? 'fibber' : kind === 'fogger' ? 'fogger' : 'grunt'
+    const prefix = kind === 'dealer' ? 'dealer' : kind === 'mimic' ? 'mimic' : kind === 'signal' ? 'signal' : kind === 'bluffer' ? 'bluffer' : kind === 'holdout' ? 'holdout' : kind === 'grudger' ? 'grudger' : kind === 'fibber' ? 'fibber' : kind === 'fogger' ? 'fogger' : kind === 'masker' ? 'masker' : 'grunt'
     const e = new Fighter(this, prefix, x, y, { hp: kind === 'grunt' ? 5 : 6 })
-    Object.assign(e, { kind, st: 'free', t: 0, wait: 0.6 + Math.random() * 0.8, laneOff: Phaser.Math.Between(kind === 'dealer' ? -26 : -10, kind === 'dealer' ? 26 : 10) })
+    Object.assign(e, { kind, st: 'free', t: 0, wait: 0.6 + Math.random() * 0.8, laneOff: Phaser.Math.Between(kind === 'dealer' || kind === 'masker' ? -26 : -10, kind === 'dealer' || kind === 'masker' ? 26 : 10) })
     if (kind === 'reader') {
       e.shadow.setFillStyle(0xa25cff, 0.7)
       e.tag = this.add.text(x, y - 270, 'READER', { fontFamily: 'Bangers', fontSize: '22px', color: '#c79bff', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5)
@@ -229,6 +252,14 @@ export default class Street extends Phaser.Scene {
     if (kind === 'fibber') {
       e.shadow.setFillStyle(0xd8c8a8, 0.95).setStrokeStyle(3, 0xfff1d6, 0.9)
       e.tag = this.add.text(x, y - 270, 'FIBBER', { fontFamily: 'Bangers', fontSize: '22px', color: '#e8c08a', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5)
+    }
+    if (kind === 'masker') {
+      // every mask looks the same; his type is the one move he always uses †
+      e.shadow.setFillStyle(0xff9a8a, 0.6)
+      e.mtype = (this.maskQueue && this.maskQueue.shift()) || null
+      if (!e.mtype) { e.mtype = Phaser.Utils.Array.GetRandom(MOVES); this.maskHidden[e.mtype]++; this.updateMaskHud() }
+      e.unmasked = false
+      e.tag = this.add.text(x, y - 270, 'MASKED', { fontFamily: 'Bangers', fontSize: '22px', color: '#ffd6c8', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5)
     }
     if (kind === 'fogger') {
       e.shadow.setFillStyle(0xb8c4dc, 0.7)
@@ -634,6 +665,8 @@ export default class Street extends Phaser.Scene {
     }
     if (e.kind === 'boss') {
       const h = this.lisa.habits.slice(-6)
+      const last = h.slice(-3)
+      if (last.length === 3 && last.every((m) => m === last[0])) return counterOf(last[0])
       if (h.length >= 2 && Math.random() < 0.55) {
         const counts = { punch: 0, kick: 0, throw: 0 }
         h.forEach((m) => counts[m]++)
@@ -655,6 +688,7 @@ export default class Street extends Phaser.Scene {
       return Phaser.Utils.Array.GetRandom(MOVES)
     }
     if (e.kind === 'fibber' || e.kind === 'fogger') return Phaser.Utils.Array.GetRandom(MOVES)
+    if (e.kind === 'masker') return e.mtype
     const r = Math.random()
     return r < 0.5 ? 'punch' : r < 0.8 ? 'kick' : 'throw'
   }
@@ -675,6 +709,7 @@ export default class Street extends Phaser.Scene {
           continue
         }
         if (e.hp <= 0 && e.t > 0.9) {
+          if (e.kind === 'masker') this.unmask(e)
           e.st = 'dead'
           if (e.moveTag) e.moveTag.destroy()
           this.tweens.add({ targets: [e.sprite, e.shadow, e.tag].filter(Boolean), alpha: 0, duration: 400, onComplete: () => { e.destroy(); e.tag && e.tag.destroy() } })
@@ -714,7 +749,7 @@ export default class Street extends Phaser.Scene {
       if (e.st === 'free') {
         const rank = byDist.indexOf(e)
         const side = Math.sign(e.x - L.x) || 1
-        let tx = L.x + side * (rank < 2 ? 120 : 290)
+        let tx = L.x + side * (rank < 2 ? 120 : 290 + (rank - 2) * 75)
         if (this.locked != null) tx = Phaser.Math.Clamp(tx, this.locked + 70, this.locked + 1210)
         const ty = Phaser.Math.Clamp(L.y + e.laneOff, LANE_TOP, LANE_BOT)
         const dx = tx - e.x, dy = ty - e.y
@@ -751,7 +786,7 @@ export default class Street extends Phaser.Scene {
             // a lie names one of his two other moves, so neither the call nor its counter is safe to copy
             e.claim = e.lied ? Phaser.Utils.Array.GetRandom(MOVES.filter((a) => a !== mv)) : mv
           }
-          e.tint(e.kind === 'mimic' ? 0xe8dcff : e.kind === 'grudger' && this.grudge ? 0xb8b8c8 : e.kind === 'fibber' ? 0xd8c8a8 : e.kind === 'fogger' ? 0xc8d0e0 : TINT[mv])
+          e.tint(e.kind === 'mimic' ? 0xe8dcff : e.kind === 'grudger' && this.grudge ? 0xb8b8c8 : e.kind === 'fibber' ? 0xd8c8a8 : e.kind === 'fogger' ? 0xc8d0e0 : e.kind === 'masker' && !e.unmasked ? 0xffd6c8 : TINT[mv])
         }
         continue
       }
@@ -768,7 +803,7 @@ export default class Street extends Phaser.Scene {
           if (Math.abs(gx - e.x) > 4) e.x += Math.sign(gx - e.x) * Math.min(Math.abs(gx - e.x), 300 * dt)
           if (Math.abs(gy - e.y) > 3) e.y += Math.sign(gy - e.y) * Math.min(Math.abs(gy - e.y), 160 * dt)
         }
-        if (!e.hitDone && e.st === 'throw') {
+        if (!e.hitDone && (e.st === 'throw' || (e.kind === 'masker' && !e.unmasked))) {
           const side = Math.sign(e.x - L.x) || 1
           let gx = L.x + side * 85
           if (this.locked != null) gx = Phaser.Math.Clamp(gx, this.locked + 40, this.locked + 1240)
@@ -777,8 +812,8 @@ export default class Street extends Phaser.Scene {
         }
         e.moveTag = e.moveTag || this.add.text(0, 0, '', { fontFamily: 'Bangers', fontSize: '26px', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5)
         // a grudger with a grudge hides his wind-up; a boss shows hers late, and one swing in three not at all
-        const hidden = e.kind === 'mimic' || e.kind === 'signal' || (e.kind === 'grudger' && this.grudge) || (e.kind === 'boss' && (e.feint || e.t < 0.25))
-        const tag = e.kind === 'mimic' ? 'MIRROR...' : e.alone ? 'GUESS...' : '...'
+        const hidden = e.kind === 'mimic' || e.kind === 'signal' || (e.kind === 'masker' && !e.unmasked) || (e.kind === 'grudger' && this.grudge) || (e.kind === 'boss' && (e.feint || e.t < 0.25))
+        const tag = e.kind === 'mimic' ? 'MIRROR...' : e.kind === 'masker' ? '?' : e.alone ? 'GUESS...' : '...'
         const shown = e.kind === 'fibber' ? e.claim || e.st : e.st
         const fogged = (e.kind === 'fogger' || (e.kind === 'boss' && this.L.art.fog)) && e.pair
         const fogTag = fogged ? (e.t < (e.kind === 'boss' ? 0.25 : 0.2) || (e.kind === 'boss' && e.feint) ? '...' : `${e.pair[0].toUpperCase()} or ${e.pair[1].toUpperCase()}`) : null
@@ -876,12 +911,22 @@ export default class Street extends Phaser.Scene {
       })
     }
     this.wave = { onClear: onClear || (() => this.unlock()), count: spawn.length }
+    // maskers: most of the wave share one type and the rest another, in a random order; the HUD shows the counts
+    const nMask = spawn.filter(([k]) => k === 'masker').length
+    if (nMask) {
+      const [a, b, c] = Phaser.Utils.Array.Shuffle(MOVES.slice())
+      const split = nMask >= 5 ? [nMask - 3, 2, 1] : nMask === 4 ? [2, 1, 1] : nMask === 3 ? [2, 1, 0] : [nMask, 0, 0] // 2+1, then 2+1+1, then 2+2+1
+      const q = [...Array(split[0]).fill(a), ...Array(split[1]).fill(b), ...Array(split[2]).fill(c)]
+      this.maskQueue = Phaser.Utils.Array.Shuffle(q)
+      q.forEach((m) => this.maskHidden[m]++)
+      this.updateMaskHud()
+    }
     this.time.delayedCall(500, () => this.dropPickup())
     const w = this.wave
     this.time.delayedCall(9000, () => this.wave === w && this.lisa.hp <= this.lisa.maxHp * 0.6 && this.dropPickup())
     spawn.forEach(([kind, x, y, delay]) => this.time.delayedCall(delay * 1000, () => {
       this.spawn(kind, relative ? this.locked + x : x, y)
-      if (kind === (this.L.talkKind || 'reader') && this.L.readerTalk && !this.readerTalked) {
+      if (kind === (this.L.talkKind || 'reader') && this.L.readerTalk && !this.readerTalked && this.checkpoint < 2) {
         this.readerTalked = true
         const e = this.enemies[this.enemies.length - 1]
         const ev = this.time.addEvent({ delay: 200, loop: true, callback: () => {
@@ -914,7 +959,7 @@ export default class Street extends Phaser.Scene {
 
   // ---------------------------------------------------------------- standoffs
   makeStandoff(cfg, enemy, handlers) {
-    const Cls = cfg.kind === 'mix' ? MixStandoff : cfg.kind === 'elim' ? ElimStandoff : cfg.kind === 'signal' ? SignalStandoff : cfg.kind === 'tree' ? TreeStandoff : cfg.kind === 'bargain' ? BargainStandoff : cfg.kind === 'rematch' ? RematchStandoff : cfg.kind === 'rulebook' ? RulebookStandoff : cfg.kind === 'fog' ? FogStandoff : Standoff
+    const Cls = cfg.kind === 'mix' ? MixStandoff : cfg.kind === 'elim' ? ElimStandoff : cfg.kind === 'signal' ? SignalStandoff : cfg.kind === 'tree' ? TreeStandoff : cfg.kind === 'bargain' ? BargainStandoff : cfg.kind === 'rematch' ? RematchStandoff : cfg.kind === 'rulebook' ? RulebookStandoff : cfg.kind === 'fog' ? FogStandoff : cfg.kind === 'masque' ? MasqueStandoff : Standoff
     return new Cls(this, {
       lisa: this.lisa, enemy, enemyName: cfg.name, pronoun: cfg.pronoun, phases: cfg.phases,
       say: (s, y) => this.caption.show(s, y), onLose: () => this.die(), ...handlers,
@@ -934,7 +979,7 @@ export default class Street extends Phaser.Scene {
 
   // the foe's HUD bar uses the colour of the foe's numbers on the card
   foeColor(kind) {
-    const blue = kind === 'elim' || kind === 'tree' || kind === 'bargain' || kind === 'rematch' || kind === 'rulebook' || kind === 'fog'
+    const blue = kind === 'elim' || kind === 'tree' || kind === 'bargain' || kind === 'rematch' || kind === 'rulebook' || kind === 'fog' || kind === 'masque'
     const c = blue ? 0x7fd6ff : kind === 'signal' ? 0xffd166 : 0xff9a5c
     this.foeBar.setFillStyle(c)
     this.foeLabel.setColor(blue ? '#7fd6ff' : kind === 'signal' ? '#ffd166' : '#ff9a5c')
@@ -1198,6 +1243,13 @@ export default class Street extends Phaser.Scene {
       this.lisa.setPose('strike')
       this.time.delayedCall(400, () => { this.lisa.setPose('idle'); b.face(1); this.floatText(b.x, b.y - 320, 'NO HANDSHAKE', '#c9b8ec', 4100, 700) })
       this.time.delayedCall(1700, () => b.face(-1))
+    } else if (name === 'cameoMask' && this.boss) {
+      const b = this.boss
+      b.face(this.lisa.x > b.x ? 1 : -1)
+      this.floatText(b.x, b.y - 330, 'MASK DOWN...', '#ffd166', 4100, 700)
+      sfx(this, 'hover')
+      this.tweens.add({ targets: b.sprite, scaleX: b.sprite.scaleX * 1.06, scaleY: b.sprite.scaleY * 1.06, duration: 250, yoyo: true, hold: 900 })
+      this.time.delayedCall(1600, () => { this.floatText(b.x, b.y - 330, '...AND UP AGAIN', '#ff8a7a', 4100, 700); sfx(this, 'hover') })
     } else if (name === 'velmaDoors') {
       const st = this.L.art.stage
       const left = st.x - 333 * (st.scale || 1), top = 520 - 440 * (st.scale || 1)
@@ -1257,7 +1309,7 @@ export default class Street extends Phaser.Scene {
       const z = this.add.image(cx + 260, 600, 'zero_idle').setOrigin(0.5, 1).setScale(0.5).setAlpha(0).setFlipX(true).setDepth(3500)
       this.tweens.add({ targets: z, alpha: 0.75, x: cx + 180, duration: 500 })
       if (this.boss) this.tweens.add({ targets: [this.boss.sprite, this.boss.shadow], alpha: 0, duration: 900, delay: 700 }) // he sweeps the loser away
-      this.tweens.add({ targets: z, alpha: 0, duration: 700, delay: 2600, onComplete: () => z.destroy() })
+      this.tweens.add({ targets: z, alpha: 0, duration: 700, delay: 4500, onComplete: () => z.destroy() })
       sfx(this, 'sting')
     }
   }

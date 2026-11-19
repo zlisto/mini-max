@@ -9,6 +9,7 @@ import { BOOK_NOTES_W6 } from './bargain.js'
 import { BOOK_NOTES_W7 } from './repeated.js'
 import { BOOK_NOTES_W8 } from './mechanism.js'
 import { BOOK_NOTES_W9 } from './fog.js'
+import { BOOK_NOTES_W10 } from './masque.js'
 
 export const LEVELS = {
   w1: {
@@ -727,6 +728,81 @@ export const LEVELS = {
     end: {
       title: 'FOG CLUB CLEARED', notes: BOOK_NOTES_W9, chapter: 'Chapter 11',
       dagger: "The cards, the club, Smokey's mix, the payoffs, the foggers and their two-move tags were made up for this game. The doors follow Figure 214.1 and the cards Exercise 217.3, each with the book's numbers first; the insisting and bluffing rates are our solution, and Velma always claims high with a high card.",
+      next: { level: 'w10', label: 'Next: The Masquerade ▶' },
+    },
+  },
+  w10: {
+    id: 'w10', title: 'THE MASQUERADE', chapter: 'Chapter 12: Sequential Equilibrium', music: 'level_10', width: 4400, page: 10, skin: 'lisar',
+    art: {
+      far: 'ball_far', mids: ['ball_mid_a'], ground: 'ball_ground', overlap: 1,
+      stage: { key: 'ball_stage', x: 3900, scale: 1.0 },
+      fg: [['fg_buffet', 40, 0.8], ['fg_candle', 1420, 0.7], ['fg_candle', 2860, 0.7], ['fg_buffet', 3000, 0.9]],
+    },
+    grunt: 'masker', habitMeter: false, talkKind: 'masker',
+    intro: [
+      { who: 'tempo', text: 'Juno said everyone here wears a mask. Page ten is somewhere in this ballroom, so keep your eyes open.' },
+      { who: 'zero', cue: 'zeroScreen', text: 'Welcome to my masquerade, my dears. Behind every mask is a guest you will never see.' },
+      { who: 'zero', text: 'Only what people do matters. Guessing what hides behind a mask is a waste of your time.' },
+      { who: 'lisa', cue: 'zeroScreenOff', text: "I can't see under the masks, but I can watch what everyone does." },
+    ],
+    readerTalk: [
+      { who: 'tempo', text: "Every mask looks the same, but each masker sticks to one move. The tally up top shows who's still hiding." },
+      { who: 'lisa', text: 'So I answer the move most of them use, and I learn more every time a mask falls.' },
+    ],
+    triggers: [
+      { id: 'wave1', x: 560, cam: 0, spawn: [['masker', 1420, 560, 0], ['masker', 1180, 630, 1.0], ['masker', 1340, 560, 1.8]] },
+      { id: 'wave2', x: 1750, cam: 1250, spawn: [['masker', 2620, 560, 0], ['masker', 2760, 630, 0.8], ['masker', 1100, 600, 2.0], ['masker', 2700, 590, 3.4], ['masker', 1020, 560, 4.6]] },
+      { id: 'elite', x: 2800, cam: 2300, standoff: 'elite' },
+      { id: 'boss', x: 3620, cam: 4400 - 1280, standoff: 'boss' },
+    ],
+    elite: {
+      prefix: 'domino', name: 'Domino', label: 'DOMINO', who: 'domino', kind: 'masque', pronoun: 'he',
+      phases: [{ hp: 3, cards: [{ mode: 'bayes' }, { mode: 'never' }, { mode: 'dominated' }] }],
+      intro: [
+        { who: 'domino', text: "Care to dance, red? I'll step in or bow out, and my mask keeps the rest a secret." },
+        { who: 'tempo', text: "When you can't see his step, you hold a belief about it, and Bayes' rule turns his mix into that belief." },
+        { who: 'tempo', text: "Then make the move that's best for that belief. That's called sequential rationality." },
+      ],
+      outro: [
+        { who: 'domino', text: 'You read me without seeing a thing. The Contessa has your page, and she is much harder to read.' },
+        { who: 'lisa', text: 'A belief tells me where I probably am. Then I play my best move there, even at a spot nobody reaches.' },
+        { who: 'tempo', text: 'Your plan and your beliefs together make an assessment.' },
+        { who: 'tempo', text: "When every move suits its belief, and every belief is consistent with the plan, that's a sequential equilibrium." },
+      ],
+    },
+    boss: {
+      prefix: 'cameo', name: 'Cameo', label: 'CAMEO', who: 'cameo', kind: 'masque', pronoun: 'she', standY: 520,
+      phases: [
+        { hp: 2, cards: [{ mode: 'posterior', book: true }, { mode: 'posterior' }] },
+        { hp: 2, cards: [{ mode: 'intuit' }, { mode: 'tremble' }] },
+      ],
+      phaseIntros: [
+        [
+          { who: 'cameo', cue: 'cameoMask', text: "Zero gave me your page, my sweet. Let's see if you can tell my strong guests from my weak ones." },
+          { who: 'cameo', text: "Every guest at my buffet swears he's strong. Fight a weak one if you like, but do leave the strong ones be." },
+          { who: 'tempo', text: 'Strong guests like beer and weak ones like quiche. In a signalling game like this, the order changes what you believe.' },
+        ],
+        [
+          { who: 'cameo', text: 'My guests have learned a trick. Now they all order the same dish, so nobody can tell them apart.' },
+          { who: 'tempo', text: 'When a guest breaks the pattern, ask who could ever gain by it. That tells you what to believe about him.' },
+          { who: 'cameo', text: "And then you'll dance with me, my sweet. Do mind my feet, because they have a way of slipping." },
+        ],
+      ],
+      taunt: { who: 'cameo', text: 'Maskers, entertain my guest while I fix my face. A hostess must always look her best.' },
+      brawl: { who: 'cameo', text: "Enough cards, my sweet. Let's see how you dance when nobody is dealing." },
+      interludes: [[['masker', 1180, 560, 0], ['masker', 1230, 630, 0.9], ['masker', -140, 600, 1.6], ['masker', -100, 560, 2.6]]],
+      outro: [
+        { who: 'cameo', text: 'You saw through every mask in my house without lifting a single one. How terribly rude, and how clever.' },
+        { who: 'lisa', text: 'Zero said only actions matter. But every right move hung on a belief, and I built each belief from what people did.' },
+        { who: 'zero', cue: 'zeroSweep', text: 'Masks and beliefs, how quaint. Come to my block party, my dears, and watch every alliance break.' },
+        { who: 'tempo', text: "That's page ten of the setlist! Hold it up." },
+        { who: 'juno', text: 'Lisa, the masks just fell off everyone here! But I can hear a party outside, and the crews are arguing.' },
+        { who: 'tempo', text: 'The next page went to the Block Party. Zero swears every alliance there will break.' },
+      ],
+    },
+    end: {
+      title: 'MASQUERADE CLEARED', notes: BOOK_NOTES_W10, chapter: 'Chapter 12',
+      dagger: "The ballroom, the guests, Domino's mixes, the variant guest lists, the swapped letters on some trees, the odd-order test run on the book's all-beer equilibrium, the dance names and the maskers were made up for this game. The trees follow Figures 219.1, 220.1 and 244.1, the buffet follows Beer or Quiche (Example 244.2, with the book's numbers first) and the dance follows Figure 248.1.",
       next: null,
     },
   },
