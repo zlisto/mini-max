@@ -11,6 +11,7 @@ import { RematchStandoff } from '../ui/RematchStandoff.js'
 import { RulebookStandoff } from '../ui/RulebookStandoff.js'
 import { FogStandoff } from '../ui/FogStandoff.js'
 import { MasqueStandoff } from '../ui/MasqueStandoff.js'
+import { CoreStandoff } from '../ui/CoreStandoff.js'
 import { BEATS, MOVES } from '../data/games.js'
 import { LEVELS } from '../data/levels.js'
 import { loadSave, writeSave } from '../systems/save.js'
@@ -28,6 +29,8 @@ const TINT_CSS = { punch: '#ff7a7a', kick: '#8fb4ff', throw: '#ffe27a' }
 const REACH = { punch: 135, kick: 180, throw: 135 }
 const E_REACH = { punch: 130, kick: 165, throw: 105 }
 const E_DMG = { punch: 1, kick: 2, throw: 2 }
+const CREW_COL = { crewa: 0xff9a3c, crewb: 0xb46bff }
+const CREW_CSS = { crewa: '#ffb066', crewb: '#c99bff' }
 // Power-ups (game fiction, named for the book's ideas)
 const POWER = {
   payoff: { key: 'fx_payoff', name: 'PAYOFF +6', color: '#ff5fa2', tip: 'Payoff: a number for how much a player likes an outcome. This one is +6 health. (Orbs are game inventions †.)' },
@@ -237,7 +240,7 @@ export default class Street extends Phaser.Scene {
 
   // ---------------------------------------------------------------- enemies
   spawn(kind, x, y) {
-    const prefix = kind === 'dealer' ? 'dealer' : kind === 'mimic' ? 'mimic' : kind === 'signal' ? 'signal' : kind === 'bluffer' ? 'bluffer' : kind === 'holdout' ? 'holdout' : kind === 'grudger' ? 'grudger' : kind === 'fibber' ? 'fibber' : kind === 'fogger' ? 'fogger' : kind === 'masker' ? 'masker' : 'grunt'
+    const prefix = kind === 'dealer' ? 'dealer' : kind === 'mimic' ? 'mimic' : kind === 'signal' ? 'signal' : kind === 'bluffer' ? 'bluffer' : kind === 'holdout' ? 'holdout' : kind === 'grudger' ? 'grudger' : kind === 'fibber' ? 'fibber' : kind === 'fogger' ? 'fogger' : kind === 'masker' ? 'masker' : kind === 'crewa' || kind === 'crewb' ? kind : 'grunt'
     const e = new Fighter(this, prefix, x, y, { hp: kind === 'grunt' ? 5 : 6 })
     Object.assign(e, { kind, st: 'free', t: 0, wait: 0.6 + Math.random() * 0.8, laneOff: Phaser.Math.Between(kind === 'dealer' || kind === 'masker' ? -26 : -10, kind === 'dealer' || kind === 'masker' ? 26 : 10) })
     if (kind === 'reader') {
@@ -260,6 +263,12 @@ export default class Street extends Phaser.Scene {
       if (!e.mtype) { e.mtype = Phaser.Utils.Array.GetRandom(MOVES); this.maskHidden[e.mtype]++; this.updateMaskHud() }
       e.unmasked = false
       e.tag = this.add.text(x, y - 270, 'MASKED', { fontFamily: 'Bangers', fontSize: '22px', color: '#ffd6c8', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5)
+    }
+    if (kind === 'crewa' || kind === 'crewb') {
+      // a crew is worth more together than apart †: each crewmate still standing adds one to a crew member's hits (at most two)
+      e.kind = 'crew'; e.crew = kind; e.laneOff = Phaser.Math.Between(-26, 26)
+      e.shadow.setFillStyle(CREW_COL[kind], 0.7)
+      e.tag = this.add.text(x, y - 270, '', { fontFamily: 'Bangers', fontSize: '22px', color: CREW_CSS[kind], stroke: '#000', strokeThickness: 4 }).setOrigin(0.5)
     }
     if (kind === 'fogger') {
       e.shadow.setFillStyle(0xb8c4dc, 0.7)
@@ -471,7 +480,7 @@ export default class Street extends Phaser.Scene {
   // A free enemy may answer her attack on the spot with his own pick (readers and dealers by reading her habits).
   answer(e) {
     if (e.st !== 'free' || this.lisa.best > 0) return
-    const p = e.kind === 'grunt' ? 0.25 : e.kind === 'mimic' ? 0.8 : 0.55
+    const p = e.kind === 'grunt' || e.kind === 'crew' ? 0.25 : e.kind === 'mimic' ? 0.8 : 0.55
     if (Math.random() >= p) return
     const mv = this.pickMove(e)
     e.st = mv; e.t = 0.5; e.hitDone = false
@@ -484,7 +493,17 @@ export default class Street extends Phaser.Scene {
     e.hitDone = true; e.setPose(e.st); e.tint(null)
     if (this.lisa.invuln > 0 || this.lisa.shield > 0) return this.hurtLisa(E_DMG[e.st], false, e)
     this.floatText(this.lisa.x, this.lisa.y - 285, `${e.st.toUpperCase()} BEATS ${mine.toUpperCase()}`, '#ff7a7a')
-    this.hurtLisa(E_DMG[e.st] + (e.kind === 'boss' ? 1 : 0), e.st === 'throw', e)
+    this.hurtLisa(E_DMG[e.st] + (e.kind === 'boss' ? 1 : 0) + this.crewBonus(e), e.st === 'throw', e)
+  }
+
+  // crewmates of e still standing, him included
+  crewSize(e) { return this.enemies.filter((o) => o.kind === 'crew' && o.crew === e.crew && o.st !== 'dead' && o.hp > 0).length }
+
+  crewBonus(e) {
+    if (e.kind !== 'crew') return 0
+    const b = Math.min(2, this.crewSize(e) - 1)
+    if (b > 0) this.floatText(e.x, e.y - 340, `CREW OF ${b + 1}: +${b}`, CREW_CSS[e.crew], 4100, 300)
+    return b
   }
 
   clash(e) {
@@ -701,6 +720,13 @@ export default class Street extends Phaser.Scene {
     for (const e of alive) {
       e.t += dt
       if (e.tag) e.tag.setPosition(e.x, e.y - 265 - e.lift).setDepth(e.y + 1)
+      if (e.kind === 'crew' && e.tag && e.hp <= 0) e.tag.setText('')
+      if (e.kind === 'crew' && e.tag && e.hp > 0) {
+        const mates = alive.filter((o) => o.kind === 'crew' && o.crew === e.crew && o.hp > 0)
+        const all = alive.filter((o) => o.kind === 'crew' && o.hp > 0).sort((a, b) => a.x - b.x)
+        const base = Math.min(...all.map((o) => o.y - 265 - o.lift))
+        e.tag.setText(`${e.crew === 'crewa' ? 'ORANGE' : 'PURPLE'} CREW OF ${mates.length}`).setY(base - (all.indexOf(e) % 3) * 26)
+      }
       if (e.st === 'held') continue
       if (e.st === 'down') {
         if (e.kind === 'boss') {
@@ -829,7 +855,7 @@ export default class Street extends Phaser.Scene {
               this.hurtEnemy(e, 2, 80, true)
             } else {
               if (e.st === 'throw') this.floatText(L.x, L.y - 280, 'THROWN', '#ffe27a')
-              this.hurtLisa(E_DMG[e.st] + (e.kind === 'boss' ? 1 : 0), e.st === 'throw', e)
+              this.hurtLisa(E_DMG[e.st] + (e.kind === 'boss' ? 1 : 0) + this.crewBonus(e), e.st === 'throw', e)
             }
           }
         }
@@ -959,7 +985,7 @@ export default class Street extends Phaser.Scene {
 
   // ---------------------------------------------------------------- standoffs
   makeStandoff(cfg, enemy, handlers) {
-    const Cls = cfg.kind === 'mix' ? MixStandoff : cfg.kind === 'elim' ? ElimStandoff : cfg.kind === 'signal' ? SignalStandoff : cfg.kind === 'tree' ? TreeStandoff : cfg.kind === 'bargain' ? BargainStandoff : cfg.kind === 'rematch' ? RematchStandoff : cfg.kind === 'rulebook' ? RulebookStandoff : cfg.kind === 'fog' ? FogStandoff : cfg.kind === 'masque' ? MasqueStandoff : Standoff
+    const Cls = cfg.kind === 'mix' ? MixStandoff : cfg.kind === 'elim' ? ElimStandoff : cfg.kind === 'signal' ? SignalStandoff : cfg.kind === 'tree' ? TreeStandoff : cfg.kind === 'bargain' ? BargainStandoff : cfg.kind === 'rematch' ? RematchStandoff : cfg.kind === 'rulebook' ? RulebookStandoff : cfg.kind === 'fog' ? FogStandoff : cfg.kind === 'masque' ? MasqueStandoff : cfg.kind === 'core' ? CoreStandoff : Standoff
     return new Cls(this, {
       lisa: this.lisa, enemy, enemyName: cfg.name, pronoun: cfg.pronoun, phases: cfg.phases,
       say: (s, y) => this.caption.show(s, y), onLose: () => this.die(), ...handlers,
@@ -979,7 +1005,7 @@ export default class Street extends Phaser.Scene {
 
   // the foe's HUD bar uses the colour of the foe's numbers on the card
   foeColor(kind) {
-    const blue = kind === 'elim' || kind === 'tree' || kind === 'bargain' || kind === 'rematch' || kind === 'rulebook' || kind === 'fog' || kind === 'masque'
+    const blue = kind === 'elim' || kind === 'tree' || kind === 'bargain' || kind === 'rematch' || kind === 'rulebook' || kind === 'fog' || kind === 'masque' || kind === 'core'
     const c = blue ? 0x7fd6ff : kind === 'signal' ? 0xffd166 : 0xff9a5c
     this.foeBar.setFillStyle(c)
     this.foeLabel.setColor(blue ? '#7fd6ff' : kind === 'signal' ? '#ffd166' : '#ff9a5c')
@@ -1049,8 +1075,9 @@ export default class Street extends Phaser.Scene {
           this.fadeProps(false)
           s.setPose('idle')
           this.startWave(cfg.interludes[i] || cfg.interludes[0], () => {
-            this.lisa.hp = Math.min(this.lisa.maxHp, this.lisa.hp + 6)
-            this.floatText(this.lisa.x, this.lisa.y - 280, '+6', '#7dffb0')
+            const heal = cfg.healFull ? this.lisa.maxHp : 6
+            this.lisa.hp = Math.min(this.lisa.maxHp, this.lisa.hp + heal)
+            this.floatText(this.lisa.x, this.lisa.y - 280, cfg.healFull ? 'FULL HEALTH' : '+6', '#7dffb0')
             this.beginBossPhase(i + 1)
           }, true)
         }))

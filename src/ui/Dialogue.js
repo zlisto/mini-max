@@ -27,6 +27,8 @@ const WHO = {
   velma: { name: 'VELMA VAGUE', key: 'velma_portrait', side: 'right', color: '#c9a8ff' },
   domino: { name: 'DOMINO', key: 'domino_portrait', side: 'right', color: '#8fa8ff' },
   cameo: { name: 'CONTESSA CAMEO', key: 'cameo_portrait', side: 'right', color: '#ff8a7a' },
+  mural: { name: 'MURAL', key: 'mural_portrait', side: 'right', color: '#ffb36b' },
+  corazon: { name: 'QUEEN CORAZON', key: 'corazon_portrait', side: 'right', color: '#ffd166' },
   dealer: { name: 'DEALER', key: 'dealer_idle', side: 'right', color: '#ff9a5c' },
 }
 

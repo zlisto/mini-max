@@ -10,6 +10,7 @@ import { BOOK_NOTES_W7 } from './repeated.js'
 import { BOOK_NOTES_W8 } from './mechanism.js'
 import { BOOK_NOTES_W9 } from './fog.js'
 import { BOOK_NOTES_W10 } from './masque.js'
+import { BOOK_NOTES_W11 } from './core.js'
 
 export const LEVELS = {
   w1: {
@@ -803,6 +804,80 @@ export const LEVELS = {
     end: {
       title: 'MASQUERADE CLEARED', notes: BOOK_NOTES_W10, chapter: 'Chapter 12',
       dagger: "The ballroom, the guests, Domino's mixes, the variant guest lists, the swapped letters on some trees, the odd-order test run on the book's all-beer equilibrium, the dance names and the maskers were made up for this game. The trees follow Figures 219.1, 220.1 and 244.1, the buffet follows Beer or Quiche (Example 244.2, with the book's numbers first) and the dance follows Figure 248.1.",
+      next: { level: 'w11', label: 'Next: The Block Party ▶' },
+    },
+  },
+  w11: {
+    id: 'w11', title: 'THE BLOCK PARTY', chapter: 'Chapter 13: The Core', music: 'level_11', width: 4400, page: 11, skin: 'lisap',
+    art: {
+      far: 'block_far', mids: ['block_mid_a'], ground: 'block_ground', overlap: 1,
+      stage: { key: 'block_stage', x: 3900, scale: 1.0 },
+      fg: [['fg_partytable', 40, 0.8], ['fg_speaker', 1420, 0.7], ['fg_speaker', 2860, 0.7], ['fg_partytable', 3000, 0.9]],
+    },
+    grunt: 'crewa', habitMeter: false, talkKind: 'crewa',
+    intro: [
+      { who: 'tempo', text: "Juno could hear the crews arguing from the ballroom. Page eleven is out here, and they're all fighting over one take." },
+      { who: 'zero', cue: 'zeroScreen', text: 'Welcome to the block party, my dears. Look at all these crews, holding hands for now.' },
+      { who: 'zero', text: 'Every alliance breaks. Sooner or later, somebody always finds a better deal on their own.' },
+      { who: 'lisa', cue: 'zeroScreenOff', text: "Then I'll find a split so good that nobody wants to walk away from it." },
+    ],
+    readerTalk: [
+      { who: 'tempo', text: 'Crews stick together, so each member hits harder for every crewmate still standing.' },
+      { who: 'lisa', text: 'So I break up the biggest crew first, and the rest of them hit like anyone else.' },
+    ],
+    triggers: [
+      { id: 'wave1', x: 560, cam: 0, spawn: [['crewa', 1420, 560, 0], ['crewa', 1180, 630, 1.0], ['crewb', 1340, 560, 1.8]] },
+      { id: 'wave2', x: 1750, cam: 1250, spawn: [['crewb', 2620, 560, 0], ['crewb', 2760, 630, 0.8], ['crewa', 1100, 600, 2.0], ['crewb', 2700, 590, 3.4], ['crewa', 1020, 560, 4.6]] },
+      { id: 'elite', x: 2800, cam: 2300, standoff: 'elite' },
+      { id: 'boss', x: 3620, cam: 4400 - 1280, standoff: 'boss' },
+    ],
+    elite: {
+      prefix: 'mural', name: 'Mural', label: 'MURAL', who: 'mural', kind: 'core', pronoun: 'she',
+      phases: [{ hp: 3, cards: [{ mode: 'walkout' }, { mode: 'split' }, { mode: 'split', hard: true }] }],
+      intro: [
+        { who: 'mural', text: "Nice fringe, Pink. I keep three crews on one take without a fight. Bet you can't." },
+        { who: 'tempo', text: 'A group walks out when it can earn more on its own than the split gives its members.' },
+        { who: 'tempo', text: 'If no group would walk out on a split, the split is in the core, and the deal holds.' },
+      ],
+      outro: [
+        { who: 'mural', text: "Not one crew walked. I'd paint that on a wall, Pink. Queen Corazon has your page, though." },
+        { who: 'lisa', text: "Give every group at least what it'd make alone, and nobody's got a reason to bail." },
+        { who: 'tempo', text: "And a crew can't ask for more than it adds, since the other two can always earn their share without it." },
+      ],
+    },
+    boss: {
+      prefix: 'corazon', name: 'Corazon', label: 'CORAZON', who: 'corazon', kind: 'core', pronoun: 'she', standY: 520, healFull: true,
+      phases: [
+        { hp: 2, cards: [{ mode: 'market' }, { mode: 'owner' }] },
+        { hp: 2, cards: [{ mode: 'majority', book: true }, { mode: 'veto' }] },
+      ],
+      phaseIntros: [
+        [
+          { who: 'corazon', text: "So you're the girl who keeps crews together. Zero left your page with me, honey, and this is my block." },
+          { who: 'corazon', text: 'On my block, whoever has what everyone needs gets paid first. Show me you know who that is.' },
+          { who: 'tempo', text: "When one side runs short, the other side fights over it. Watch who's easy to replace." },
+        ],
+        [
+          { who: 'corazon', text: "Here's a party trick. Some of my deals hold, and some fall apart however you slice them." },
+          { who: 'lisa', text: "Wait, so some deals can't hold at all? Then I want to know which ones." },
+          { who: 'tempo', text: 'So check first whether any split holds. Sometimes one does, and sometimes none can.' },
+        ],
+      ],
+      taunt: { who: 'corazon', text: 'Crews, keep my guest busy while I change the record.' },
+      brawl: { who: 'corazon', text: "No more cards, honey. Let's see you dance to my beat." },
+      interludes: [[['crewa', 1180, 560, 0], ['crewa', 1230, 630, 0.9], ['crewb', -140, 600, 1.6], ['crewb', -100, 560, 2.6]]],
+      outro: [
+        { who: 'corazon', text: 'You kept my whole block together, and you knew when nothing could. Take your page, honey.' },
+        { who: 'lisa', text: "Zero was half right. Some deals can't hold, but plenty can if every group gets its worth." },
+        { who: 'zero', cue: 'zeroSweep', text: "Clever little deals, my dears. Come to my Grand Finale, and I'll show you who really gets paid." },
+        { who: 'tempo', text: "That's page eleven of the setlist! Hold it up." },
+        { who: 'juno', text: 'Lisa, the crews stopped arguing and started dancing! But Zero kept the last page for his throne.' },
+        { who: 'tempo', text: "So that's where we're headed. Zero swears the strongest walks off with everything." },
+      ],
+    },
+    end: {
+      title: 'BLOCK PARTY CLEARED', notes: BOOK_NOTES_W11, chapter: 'Chapter 13',
+      dagger: 'The block party, the crews and what they earn, the coins, the speaker and amp owners, the truck and its dancers, the take scaled to six coins, the rules for winning the pot and the crew hit bonus were made up for this game. The cards follow Definition 258.2, Examples 259.1, 260.1 and 265.1, and Exercises 259.3 and 261.1.',
       next: null,
     },
   },
