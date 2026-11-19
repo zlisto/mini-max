@@ -8,6 +8,7 @@ import { BOOK_NOTES_W5 } from './trees.js'
 import { BOOK_NOTES_W6 } from './bargain.js'
 import { BOOK_NOTES_W7 } from './repeated.js'
 import { BOOK_NOTES_W8 } from './mechanism.js'
+import { BOOK_NOTES_W9 } from './fog.js'
 
 export const LEVELS = {
   w1: {
@@ -652,6 +653,80 @@ export const LEVELS = {
     end: {
       title: 'RULEBOOK THEATER CLEARED', notes: BOOK_NOTES_W8, chapter: 'Chapter 10',
       dagger: "The cards, the rule names, the upgrade's cost of ten, the shows and the fibbers (and catching one turning him honest) were made up for this game. Pay the Gap, The Door Fee and The Kickback are Groves mechanisms (184.1); Pay the Gap is Clarke's version, which works here because claims can't go below zero. Values are whole coins, the others' totals are tested in half coins, the token fine is half a coin, and voters' rankings have no ties, though the book allows them. Solomon's form follows Figure 191.1.",
+      next: { level: 'w9', label: 'Next: The Fog Club ▶' },
+    },
+  },
+  w9: {
+    id: 'w9', title: 'THE FOG CLUB', chapter: 'Chapter 11: Imperfect Information', music: 'level_09', width: 4400, page: 9, skin: 'lisar',
+    art: {
+      far: 'fog_far', mids: ['fog_mid_a'], ground: 'fog_ground', overlap: 150, fog: true,
+      stage: { key: 'fog_stage', x: 3900, scale: 1.0 },
+      fg: [['fg_table', 180, 0.9], ['fg_sax', 1420, 0.75], ['fg_sax', 2860, 0.75], ['fg_table', 3000, 0.9]],
+    },
+    grunt: 'fogger', habitMeter: false, talkKind: 'fogger',
+    intro: [
+      { who: 'tempo', text: "There's fog everywhere, just like Juno said. Page nine is somewhere in this club, if we can ever find the club." },
+      { who: 'zero', cue: 'zeroScreen', text: 'Welcome to the Fog Club, my dears. In here nobody sees what anyone else just did.' },
+      { who: 'zero', text: "Ignorance is just weakness. If you can't see what happened, you can't plan, and you can't win." },
+      { who: 'lisa', cue: 'zeroScreenOff', text: "Then I'll have to win without seeing everything." },
+      { who: 'lisa', text: 'A new act gets a new coat. In fog this thick, red is the one thing anyone can see.' },
+    ],
+    readerTalk: [
+      { who: 'tempo', text: "In the fog you only see two moves a fogger might use. Pick the answer that's safe against both of them." },
+      { who: 'lisa', text: "So one answer has to work for everything I can't tell apart." },
+    ],
+    triggers: [
+      { id: 'wave1', x: 560, cam: 0, spawn: [['grunt', 1420, 560, 0], ['fogger', 1180, 630, 1.0], ['fogger', 1340, 560, 1.8]] },
+      { id: 'wave2', x: 1750, cam: 1250, spawn: [['fogger', 2620, 560, 0], ['fogger', 2660, 630, 0.8], ['grunt', 1100, 600, 2.0], ['fogger', 2700, 590, 3.4]] },
+      { id: 'elite', x: 2800, cam: 2300, standoff: 'elite' },
+      { id: 'boss', x: 3620, cam: 4400 - 1280, standoff: 'boss' },
+    ],
+    elite: {
+      prefix: 'smokey', name: 'Smokey', label: 'SMOKEY BLUE', who: 'smokey', kind: 'fog', pronoun: 'he',
+      phases: [{ hp: 2, cards: [{ mode: 'plan' }, { mode: 'kuhn', book: true }] }],
+      intro: [
+        { who: 'smokey', text: 'Evening, red. I play in the fog, and you never get to see which way I went.' },
+        { who: 'tempo', text: "Spots you can't tell apart form an information set. A plan picks one move for each set, not for each spot." },
+        { who: 'tempo', text: 'So choose your whole plan up front, using how often he plays high and how often he plays low.' },
+      ],
+      outro: [
+        { who: 'smokey', text: "You never saw my move and still had the answer ready. That's cool, red. Velma has your page, up by the stage." },
+        { who: 'lisa', text: 'A plan picks one move for each place I can tell apart. The fog just makes two places into one.' },
+        { who: 'tempo', text: 'With perfect recall, a mixed strategy over whole plans and a behavioral one, mixing at each step, come out the same.' },
+      ],
+    },
+    boss: {
+      prefix: 'velma', name: 'Velma', label: 'VELMA VAGUE', who: 'velma', kind: 'fog', pronoun: 'she', standY: 520,
+      phases: [
+        { hp: 2, cards: [{ mode: 'driver', book: true }, { mode: 'driver' }] },
+        { hp: 2, cards: [{ mode: 'bluff', k: 4 }, { mode: 'bluff' }] },
+      ],
+      phaseIntros: [
+        [
+          { who: 'velma', text: "Zero left your page with me, darling. I hid it behind one of my doors, and now I can't recall which." },
+          { who: 'velma', cue: 'velmaDoors', text: 'Every door in my hall looks the same, and I never remember which one I just passed.' },
+          { who: 'tempo', text: "That's imperfect recall. The second door pays best, but she can't tell them apart, so pick how often she walks on." },
+        ],
+        [
+          { who: 'velma', text: "Let's play cards instead. I can see my card and you can't, and I just might be bluffing." },
+          { who: 'tempo', text: "If she admits a low card she pays you. If she claims it's high, you give in or insist on seeing it." },
+        ],
+      ],
+      taunt: { who: 'velma', text: "Foggers, keep my guest company while I find my way back. It's somewhere around here, I think." },
+      brawl: { who: 'velma', text: "I forget why we're fighting, darling, but I'm sure I'll enjoy it." },
+      interludes: [[['fogger', 1200, 560, 0], ['fogger', 1240, 630, 0.9], ['grunt', -140, 600, 1.6]]],
+      outro: [
+        { who: 'velma', text: 'So a head like mine does best by flipping a weighted coin at every door. How very strange, darling.' },
+        { who: 'lisa', text: "Zero said ignorance is weakness. I couldn't see her card, but the right rate kept my loss as small as it could be." },
+        { who: 'zero', cue: 'zeroSweep', text: "You were clever in the dark, my dears. At my masquerade everyone wears a mask, and beliefs don't matter, only actions." },
+        { who: 'tempo', text: "That's page nine of the setlist! Hold it up." },
+        { who: 'juno', text: "Lisa, the fog is lifting here, so you must have won! But now everyone around me is wearing a mask." },
+        { who: 'tempo', text: 'The next page went to the Masquerade, where nobody is quite who they seem.' },
+      ],
+    },
+    end: {
+      title: 'FOG CLUB CLEARED', notes: BOOK_NOTES_W9, chapter: 'Chapter 11',
+      dagger: "The cards, the club, Smokey's mix, the payoffs, the foggers and their two-move tags were made up for this game. The doors follow Figure 214.1 and the cards Exercise 217.3, each with the book's numbers first; the insisting and bluffing rates are our solution, and Velma always claims high with a high card.",
       next: null,
     },
   },

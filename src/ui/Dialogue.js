@@ -23,6 +23,8 @@ const WHO = {
   grimes: { name: 'CHAMP GRIMES', key: 'grimes_portrait', side: 'right', color: '#c9b8ec' },
   ham: { name: 'HAMISH HAM', key: 'ham_portrait', side: 'right', color: '#e8c08a' },
   redline: { name: 'REDLINE', key: 'redline_portrait', side: 'right', color: '#ff6b7a' },
+  smokey: { name: 'SMOKEY BLUE', key: 'smokey_portrait', side: 'right', color: '#7fb4ff' },
+  velma: { name: 'VELMA VAGUE', key: 'velma_portrait', side: 'right', color: '#c9a8ff' },
   dealer: { name: 'DEALER', key: 'dealer_idle', side: 'right', color: '#ff9a5c' },
 }
 
