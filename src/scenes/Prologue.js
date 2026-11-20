@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { bindPauseKey } from './Pause.js'
 import { Dialogue } from '../ui/Dialogue.js'
 import { Fighter } from '../actors/Fighter.js'
 import { PD, shuffle } from '../data/games.js'
@@ -14,10 +15,11 @@ export default class Prologue extends Phaser.Scene {
     this.cameras.main.fadeIn(500)
     playMusic(this, 'prologue_theme', 0.4)
     bindMuteKey(this)
+    bindPauseKey(this)
     this.add.image(640, 360, 'prologue_bg').setDisplaySize(1280, 720)
     this.lisa = new Fighter(this, 'lisa', 300, 650, { artFacing: 1 })
     this.lisa.face(1)
-    this.juno = new Fighter(this, 'juno', 990, 650, { artFacing: 1 })
+    this.juno = new Fighter(this, 'juno', 990, 650, { artFacing: -1 })
     this.juno.face(-1)
     this.zero = new Fighter(this, 'zero', 640, 690, { artFacing: 1 })
     this.zero.face(-1)
@@ -36,7 +38,7 @@ export default class Prologue extends Phaser.Scene {
       { who: 'zero', text: "Because I wanted a word with each of you alone, my dears. Don't bother shouting; the walls are very thick.", do: () => this.tweens.add({ targets: [this.zero.sprite, this.zero.shadow], alpha: { from: 0, to: 1 }, duration: 600 }) },
       { who: 'zero', text: "I'm making you both the same offer, and neither of you will hear what the other says." },
       { who: 'zero', text: "You can stay quiet, or you can sell your partner out. Decide before the curtain goes up." },
-      { who: 'tempo', text: "Lisa, I drew his deal as a card for you. Your points are in pink and Juno's are in teal, and bigger is better.", do: () => this.showCard() },
+      { who: 'tempo', text: "Lisa, I drew his deal as a card for you. Your points are in pink and Rosie's are in teal, and bigger is better.", do: () => this.showCard() },
     ], () => this.startChoice())
   }
 
@@ -48,8 +50,8 @@ export default class Prologue extends Phaser.Scene {
     c.add(g)
     const txt = (x, y, s, o = {}) => this.add.text(x, y, s, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '20px', color: '#fff', ...o }).setOrigin(0.5)
     c.add(txt(0, -128, "ZERO'S DEAL", { fontFamily: 'Bangers', fontSize: '30px', color: '#ffd166' }))
-    c.add(txt(100, -90, `Juno:\n${PD.label.quiet}`, { color: '#5ce1d6', fontSize: '17px', align: 'center' }))
-    c.add(txt(225, -90, `Juno:\n${PD.label.sell}`, { color: '#5ce1d6', fontSize: '17px', align: 'center' }))
+    c.add(txt(100, -90, `Rosie:\n${PD.label.quiet}`, { color: '#5ce1d6', fontSize: '17px', align: 'center' }))
+    c.add(txt(225, -90, `Rosie:\n${PD.label.sell}`, { color: '#5ce1d6', fontSize: '17px', align: 'center' }))
     this.rowOrder = shuffle(PD.rows)
     this.rowY = {}
     this.rowHit = {}
@@ -99,15 +101,15 @@ export default class Prologue extends Phaser.Scene {
     const lines = [
       { who: 'lisa', text: r === 'quiet' ? "I'm staying quiet." : "...I'm selling her out." },
       { who: 'juno', text: 'I sold you out. I\'m sorry, Lisa.' },
-      { who: 'tempo', text: `You got ${a} points and Juno got ${b}.` },
-      { who: 'tempo', text: 'Look at the card. If Juno stays quiet, selling out gets you 4 and staying quiet gets you 3.', do: () => hl('quiet', true) },
-      { who: 'tempo', text: 'And if Juno sells out, selling out gets you 1 and staying quiet gets you 0.', do: () => { hl('quiet', false); hl('sell', true) } },
+      { who: 'tempo', text: `You got ${a} points and Rosie got ${b}.` },
+      { who: 'tempo', text: 'Look at the card. If Rosie stays quiet, selling out gets you 4 and staying quiet gets you 3.', do: () => hl('quiet', true) },
+      { who: 'tempo', text: 'And if Rosie sells out, selling out gets you 1 and staying quiet gets you 0.', do: () => { hl('quiet', false); hl('sell', true) } },
       { who: 'tempo', text: 'Whatever she does, selling out pays you more. Her card works the same way.', do: () => hl('sell', false) },
       { who: 'tempo', text: 'So if you both play it safe, you both sell out and get 1 each, when staying quiet would have paid 3 each.' },
       { who: 'zero', text: 'Spoken like a pair of rational players. I do love those.' },
       { who: 'zero', text: "For me to win, somebody has to lose. That's how every game works, my dears." },
       { who: 'juno', text: 'Lisa, the setlist! Don\'t let him take our songs!', do: () => this.takeJuno() },
-      { who: 'lisa', text: 'Juno!' },
+      { who: 'lisa', text: 'Rosie!' },
       { who: 'tempo', text: "He tore up your setlist, and the pages are scattered all over his Tour." },
       { who: 'lisa', text: "Then I'll win back every page, and next time I'll read the game before I play it." },
     ]
@@ -118,7 +120,9 @@ export default class Prologue extends Phaser.Scene {
     sfx(this, 'sting')
     this.time.delayedCall(400, () => sfx(this, 'whooshBig'))
     if (this.cardC) this.tweens.add({ targets: this.cardC, alpha: 0, duration: 300 })
-    this.tweens.add({ targets: [this.juno.sprite, this.juno.shadow, this.zero.sprite, this.zero.shadow], alpha: 0, x: '+=260', duration: 900, delay: 300 })
+    // move the fighters themselves (sync() puts their sprites back at f.x every frame), and fade their sprites separately
+    this.tweens.add({ targets: [this.juno, this.zero], x: '+=260', duration: 900, delay: 300 })
+    this.tweens.add({ targets: [this.juno.sprite, this.juno.shadow, this.zero.sprite, this.zero.shadow], alpha: 0, duration: 900, delay: 300 })
     for (let i = 0; i < 6; i++) {
       const p = this.add.image(900, 520, 'setlist_page').setDepth(4500).setScale(0.8)
       this.tweens.add({

@@ -17,7 +17,7 @@ export default class End extends Phaser.Scene {
     this.add.rectangle(640, 360, 1280, 720, 0x0b0614, 0.84)
     this.add.image(1170, 112, 'setlist_page').setScale(1.3).setAngle(-8)
     this.add.text(640, 66, E.title, { fontFamily: 'Bangers', fontSize: '68px', color: '#ffd166', stroke: '#ff5fa2', strokeThickness: 6 }).setOrigin(0.5)
-    this.add.text(640, 122, L.page === 12 ? 'Lisa and Juno have their whole setlist back, all twelve pages.' : `Setlist page ${L.page} of 12 recovered`, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '24px', color: '#fff' }).setOrigin(0.5)
+    this.add.text(640, 122, L.page === 12 ? 'Lisa and Rosie have their whole setlist back, all twelve pages.' : `Setlist page ${L.page} of 12 recovered`, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '24px', color: '#fff' }).setOrigin(0.5)
     this.add.text(150, 168, 'WHAT YOU USED, FROM THE BOOK', { fontFamily: 'Bangers', fontSize: '30px', color: '#ff5fa2' })
     E.notes.forEach(([idea, ref], i) => {
       const y = 200 + i * (E.notes.length > 9 ? 28 : E.notes.length > 8 ? 33 : 36)
@@ -49,7 +49,7 @@ export default class End extends Phaser.Scene {
       btnY = Math.min(688, Math.max(640, msgY + (E.credits ? 82 : 44)))
       if (E.credits) this.add.text(640, msgY + 40, E.credits, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '16px', color: '#c9b8ec' }).setOrigin(0.5)
       if (E.finale) writeSave({ scene: 'Title', level: 'w1', checkpoint: 0, bossPhase: 0, toured: true })
-      this.add.text(640, msgY + (E.finale ? 6 : 0), E.finale ? 'THE END. Lisa and Juno take the stage together. Thanks for playing Mini Max!' : "That's as far as the Tour goes for now. More worlds are on the way.", {
+      this.add.text(640, msgY + (E.finale ? 6 : 0), E.finale ? 'THE END. Lisa and Rosie take the stage together. Thanks for playing Mini Max!' : "That's as far as the Tour goes for now. More worlds are on the way.", {
         fontFamily: E.finale ? 'Bangers' : 'Nunito', fontStyle: E.finale ? 'normal' : '800', fontSize: E.finale ? '30px' : '20px', color: '#ffd166',
       }).setOrigin(0.5)
       btn(470, `Replay ${L.title}`, () => this.scene.start('Street', { level: L.id, checkpoint: 0 }))

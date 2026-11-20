@@ -259,10 +259,10 @@ export const LEVELS = {
     grunt: 'signal', habitMeter: false, talkKind: 'signal', tempoAcross: true,
     intro: [
       { who: 'tempo', text: 'This is the Signal Tower district. Page four of the setlist blew up onto these rooftops.' },
-      { who: 'tempo', cue: 'tempoAcross', text: "Juno said somewhere high, so this must be it. I'll signal from that far mast, so watch for my green light." },
+      { who: 'tempo', cue: 'tempoAcross', text: "Rosie said somewhere high, so this must be it. I'll signal from that far mast, so watch for my green light." },
       { who: 'zero', cue: 'zeroScreen', text: 'Welcome to my tower, my dears. Up here every plan travels by beacon, and I own the static.' },
       { who: 'zero', text: "And as long as everyone knows the plan, that's all any partnership needs. I'd stake my whole Tour on it." },
-      { who: 'lisa', cue: 'zeroScreenOff', text: "Everyone already knows my plan. It's the one where I find Juno." },
+      { who: 'lisa', cue: 'zeroScreenOff', text: "Everyone already knows my plan. It's the one where I find Rosie." },
     ],
     readerTalk: [
       { who: 'tempo', text: "Signalers move in pairs and hide their wind-up. Watch the flare instead, because they'll both use the move it shows." },
@@ -343,7 +343,7 @@ export const LEVELS = {
     },
     grunt: 'bluffer', habitMeter: false, talkKind: 'bluffer',
     intro: [
-      { who: 'tempo', text: 'A whole block of shops that look the same, just as Juno said. Page five landed here, and every shop belongs to one man.' },
+      { who: 'tempo', text: 'A whole block of shops that look the same, just as Rosie said. Page five landed here, and every shop belongs to one man.' },
       { who: 'lisa', text: 'The hoodie is for the long game. Something tells me this one comes in turns.' },
       { who: 'zero', cue: 'zeroScreen', text: 'My dears, meet Mr. Chainsworth. He owns every store here, and he swears he crushes anyone who opens next door.' },
       { who: 'zero', text: 'A threat like that always works. Nobody walks into a fight they know they will lose.' },
@@ -428,7 +428,7 @@ export const LEVELS = {
     },
     grunt: 'holdout', habitMeter: false, talkKind: 'holdout', windOrbs: true,
     intro: [
-      { who: 'tempo', text: "It's raining money, just like Juno said, and the wind takes it as fast as it falls. Page six is in this storm." },
+      { who: 'tempo', text: "It's raining money, just like Rosie said, and the wind takes it as fast as it falls. Page six is in this storm." },
       { who: 'zero', cue: 'zeroScreen', text: 'Welcome to the Money Rain, my dears. Lady Ledger runs every deal here, and she has never once blinked.' },
       { who: 'zero', text: 'Whoever holds out longest wins, and whoever flinches first gets the crumbs.' },
       { who: 'lisa', cue: 'zeroScreenOff', text: "The funny thing about waiting in a windstorm is that the pile doesn't wait with you." },
@@ -591,7 +591,7 @@ export const LEVELS = {
     },
     grunt: 'fibber', habitMeter: false, talkKind: 'fibber',
     intro: [
-      { who: 'tempo', text: 'A theater full of rule books, just like Juno said. Page eight is somewhere behind that curtain.' },
+      { who: 'tempo', text: 'A theater full of rule books, just like Rosie said. Page eight is somewhere behind that curtain.' },
       { who: 'zero', cue: 'zeroScreen', text: 'Welcome to my theater, my dears. Everyone here says one thing and does another.' },
       { who: 'zero', text: 'No rule can make liars tell the truth. People lie whenever lying pays them, and no rule book will change that.' },
       { who: 'lisa', cue: 'zeroScreenOff', text: 'Then I just need rules where lying never pays.' },
@@ -668,7 +668,7 @@ export const LEVELS = {
     },
     grunt: 'fogger', habitMeter: false, talkKind: 'fogger',
     intro: [
-      { who: 'tempo', text: "There's fog everywhere, just like Juno said. Page nine is somewhere in this club, if we can ever find the club." },
+      { who: 'tempo', text: "There's fog everywhere, just like Rosie said. Page nine is somewhere in this club, if we can ever find the club." },
       { who: 'zero', cue: 'zeroScreen', text: 'Welcome to the Fog Club, my dears. In here nobody sees what anyone else just did.' },
       { who: 'zero', text: "Ignorance is just weakness. If you can't see what happened, you can't plan, and you can't win." },
       { who: 'lisa', cue: 'zeroScreenOff', text: "Then I'll have to win without seeing everything." },
@@ -742,7 +742,7 @@ export const LEVELS = {
     },
     grunt: 'masker', habitMeter: false, talkKind: 'masker',
     intro: [
-      { who: 'tempo', text: 'Juno said everyone here wears a mask. Page ten is somewhere in this ballroom, so keep your eyes open.' },
+      { who: 'tempo', text: 'Rosie said everyone here wears a mask. Page ten is somewhere in this ballroom, so keep your eyes open.' },
       { who: 'zero', cue: 'zeroScreen', text: 'Welcome to my masquerade, my dears. Behind every mask is a guest you will never see.' },
       { who: 'zero', text: 'Only what people do matters. Guessing what hides behind a mask is a waste of your time.' },
       { who: 'lisa', cue: 'zeroScreenOff', text: "I can't see under the masks, but I can watch what everyone does." },
@@ -817,7 +817,7 @@ export const LEVELS = {
     },
     grunt: 'crewa', habitMeter: false, talkKind: 'crewa',
     intro: [
-      { who: 'tempo', text: "Juno could hear the crews arguing from the ballroom. Page eleven is out here, and they're all fighting over one take." },
+      { who: 'tempo', text: "Rosie could hear the crews arguing from the ballroom. Page eleven is out here, and they're all fighting over one take." },
       { who: 'zero', cue: 'zeroScreen', text: 'Welcome to the block party, my dears. Look at all these crews, holding hands for now.' },
       { who: 'zero', text: 'Every alliance breaks. Sooner or later, somebody always finds a better deal on their own.' },
       { who: 'lisa', cue: 'zeroScreenOff', text: "Then I'll find a split so good that nobody wants to walk away from it." },
@@ -884,7 +884,7 @@ export const LEVELS = {
   },
   w12: {
     id: 'w12', title: 'THE GRAND FINALE', chapter: 'Chapters 14 and 15: The Shapley Value and the Nash Solution', music: 'level_12', width: 4400, page: 12, skin: 'lisap',
-    outfits: ['lisa', 'lisag', 'lisar', 'lisap'], juno: true,
+    outfits: ['lisa', 'lisag', 'lisar', 'lisap'], juno: true, ending: true,
     art: {
       far: 'finale_far', mids: ['finale_mid_a'], ground: 'finale_ground', overlap: 1,
       stage: { key: 'finale_stage', x: 3900, scale: 1.0 },
@@ -892,10 +892,10 @@ export const LEVELS = {
     },
     grunt: 'reader', habitMeter: false, talkKind: 'reader',
     intro: [
-      { who: 'tempo', text: 'This is it, the Grand Finale. Juno and the last page are up on that stage, and the whole city is watching.' },
+      { who: 'tempo', text: 'This is it, the Grand Finale. Rosie and the last page are up on that stage, and the whole city is watching.' },
       { who: 'zero', cue: 'zeroScreen', text: "Welcome to my Grand Finale, my dears. Tonight you'll learn the only rule that matters." },
       { who: 'zero', text: 'The strongest takes it all, and everyone else is merely the warm-up act.' },
-      { who: 'lisa', cue: 'zeroScreenOff', text: "Juno's up there. I'm getting her back, and then we'll see who takes what." },
+      { who: 'lisa', cue: 'zeroScreenOff', text: "Rosie's up there. I'm getting her back, and then we'll see who takes what." },
       { who: 'tempo', text: 'Oh, and all four of your outfits made it. Press O to switch whenever you like.' },
     ],
     readerTalk: [
@@ -912,7 +912,7 @@ export const LEVELS = {
       prefix: 'marquee', name: 'Marquee', label: 'MARQUEE', who: 'marquee', kind: 'finale', pronoun: 'he',
       phases: [{ hp: 3, cards: [{ mode: 'margin' }, { mode: 'shapley' }, { mode: 'seller', book: true }] }],
       intro: [
-        { who: 'marquee', text: "Showtime, pink! Places, places! Juno's in my dressing room, and you're on in five." },
+        { who: 'marquee', text: "Showtime, pink! Places, places! Rosie's in my dressing room, and you're on in five." },
         { who: 'marquee', text: 'Split the band\'s take so nobody walks out, or she stays in there till the encore.' },
         { who: 'tempo', text: 'Pay each player for what they bring. Line them up and watch what every arrival adds.' },
         { who: 'tempo', text: 'Average that over every order they could arrive in, and you get the Shapley value.' },
@@ -921,7 +921,7 @@ export const LEVELS = {
         { who: 'marquee', text: "Shares add up and nobody's walking, so the curtain's up. Fine, fine, the dressing room's open!" },
         { who: 'juno', cue: 'junoFree', text: 'Lisa! I sold you out on opening night, and you still came for me.' },
         { who: 'lisa', text: 'We both did. This time we play it together, and we read the game first.' },
-        { who: 'tempo', text: 'Zero is up on his throne with the last page. Stay close, Juno.' },
+        { who: 'tempo', text: 'Zero is up on his throne with the last page. Stay close, Rosie.' },
       ],
     },
     boss: {
@@ -948,7 +948,7 @@ export const LEVELS = {
       outro: [
         { who: 'zero', text: 'Impossible! I was the strongest act in the house!' },
         { who: 'lisa', text: 'You told me somebody has to lose for you to win. Tonight everyone on this stage got paid.' },
-        { who: 'juno', cue: 'duet', text: "That's our setlist, all twelve pages. Shall we sing it the way we wrote it?" },
+        { who: 'juno', text: "That's our song, Lisa. Shall we sing it the way we wrote it?" },
         { who: 'zero', text: 'Nobody lost, and the house is still on its feet? How very unsettling, my dears.' },
         { who: 'tempo', cue: 'chant', text: "Hear that? The whole stadium's chanting MINI MAX, and I'm pretty sure they mean both of you." },
         { who: 'lisa', text: 'I started this Tour playing it safe, all on my own. Mini Max sounds better as a duet.' },
@@ -956,8 +956,24 @@ export const LEVELS = {
     },
     end: {
       title: 'GRAND FINALE CLEARED', notes: BOOK_NOTES_W12, chapter: 'Chapters 14 and 15', finale: true, credits: 'Mini Max, a game from the Arcade of Alexandria, built on A Course in Game Theory by Martin J. Osborne and Ariel Rubinstein.',
-      dagger: "The stadium, the band, the coins, the seats, the three acts, the happiness tables, Marquee, the encore of rivals, the outfit switch and Juno at Lisa's side were made up for this game. The cards follow Definition 291.2, Examples 294.1, 294.3 and 295.3, the axioms of Proposition 293.1, and Propositions 302.1 and 304.1.",
+      dagger: "The stadium, the band, the coins, the seats, the three acts, the happiness tables, Marquee, the encore of rivals, the outfit switch and Rosie at Lisa's side were made up for this game. The cards follow Definition 291.2, Examples 294.1, 294.3 and 295.3, the axioms of Proposition 293.1, and Propositions 302.1 and 304.1.",
       next: null,
     },
   },
 }
+
+// every world gets a wave between the elite and the boss, drawn from its own second wave
+;(function withPreBossWave() {
+  for (const L of Object.values(LEVELS)) {
+    const T = L.triggers, b = T.findIndex((t) => t.standoff === 'boss'), w2 = T.find((t) => t.id === 'wave2')
+    if (b < 0 || !w2 || T.some((t) => t.id === 'wave3')) continue
+    // the two kinds wave 2 uses most, two of each, so pairs, crews and mask tallies still work
+    const count = {}
+    w2.spawn.forEach((sp) => { count[sp[0]] = (count[sp[0]] || 0) + 1 })
+    const top = Object.keys(count).sort((a, b) => count[b] - count[a])
+    const kinds = [top[0], top[0], top[1] || top[0], top[1] || top[0]]
+    const k = (i) => kinds[i]
+    const el = T.find((t) => t.standoff === 'elite'), x = Math.round((el.x + T[b].x) / 2), cam = T[b].cam - 420
+    T.splice(b, 0, { id: 'wave3', x, cam, spawn: [[k(0), cam + 1380, 560, 0], [k(2), cam + 1430, 630, 0.9], [k(1), cam - 120, 600, 1.8], [k(3), cam - 160, 560, 2.6]] })
+  }
+})()

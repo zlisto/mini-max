@@ -1,11 +1,11 @@
 import Phaser from 'phaser'
 import { sfx, VOICE } from '../systems/sfx.js'
 
-const WHO = {
+export const WHO = {
   lisa: { name: 'LISA', key: 'lisa_portrait', side: 'left', color: '#ff5fa2' },
   tempo: { name: 'TEMPO', key: 'tempo_sprite', side: 'left', color: '#ffd166' },
   zero: { name: 'IMPRESARIO ZERO', key: 'zero_portrait', side: 'right', color: '#e8e8e8' },
-  juno: { name: 'JUNO', key: 'juno_portrait', side: 'right', color: '#5ce1d6' },
+  juno: { name: 'ROSIE', key: 'juno_portrait', side: 'right', color: '#5ce1d6' },
   sadie: { name: 'SADIE POINT', key: 'sadie_portrait', side: 'right', color: '#f4f4ff' },
   brick: { name: 'BRICK', key: 'brick_idle', side: 'right', color: '#ff9a5c' },
   grunt: { name: 'GRUNT', key: 'grunt_idle', side: 'right', color: '#cccccc' },

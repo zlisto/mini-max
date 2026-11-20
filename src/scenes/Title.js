@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { playMusic, bindMuteKey } from '../systems/audio.js'
 import { sfx } from '../systems/sfx.js'
-import { loadSave } from '../systems/save.js'
+import { loadSave, writeSave } from '../systems/save.js'
 import { LEVELS } from '../data/levels.js'
 
 export default class Title extends Phaser.Scene {
@@ -28,12 +28,13 @@ export default class Title extends Phaser.Scene {
     this.tweens.add({ targets: start, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 })
 
     // Level select, built from the level data: pick a world (←/→ or click), then where to start (1/2/3 or click)
-    const go = (level, checkpoint) => () => this.scene.start('Street', { level, checkpoint })
+    const go = (level, checkpoint) => () => { writeSave({ eliteFight: null, bossPhase: 0 }); this.scene.start('Street', { level, checkpoint }) }
     const worlds = [{ id: 'pro', label: 'Prologue', entries: [['Prologue', () => this.scene.start('Prologue')]] }]
     Object.values(LEVELS).forEach((L, n) => {
       const idx = (k) => L.triggers.findIndex((t) => t.standoff === k)
       worlds.push({ id: L.id, label: `W${n + 1}`, entries: [[L.title, go(L.id, 0)], [L.elite.label, go(L.id, idx('elite'))], [L.boss.label, go(L.id, idx('boss'))]] })
     })
+    worlds.push({ id: 'end', label: 'Ending', entries: [['Ending', () => this.scene.start('Ending')]] })
     let sel = Math.max(0, worlds.findIndex((w) => w.id === save.level))
     this.add.text(640, 494, 'LEVEL SELECT   ←/→ world   1/2/3 start', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '16px', color: '#b9a6e0' }).setOrigin(0.5)
     const tabs = worlds.map((w, i) => {
@@ -61,8 +62,12 @@ export default class Title extends Phaser.Scene {
     paint()
     this.input.keyboard.on('keydown-LEFT', () => { sel = (sel - 1 + worlds.length) % worlds.length; sfx(this, 'hover'); paint() })
     this.input.keyboard.on('keydown-RIGHT', () => { sel = (sel + 1) % worlds.length; sfx(this, 'hover'); paint() })
-    ;['ONE', 'TWO', 'THREE'].forEach((K, k) => this.input.keyboard.on(`keydown-${K}`, () => { const e = worlds[sel].entries[k]; if (e) { sfx(this, 'select'); e[1]() } }))
-    this.input.keyboard.once('keydown-ENTER', () => {
+    // a held key (say Enter from the pause menu) auto-repeats into the Title; only a fresh press starts anything
+    this.leaving = false
+    ;['ONE', 'TWO', 'THREE'].forEach((K, k) => this.input.keyboard.on(`keydown-${K}`, (ev) => { const e = worlds[sel].entries[k]; if (e && !ev.repeat && !this.leaving) { this.leaving = true; sfx(this, 'select'); e[1]() } }))
+    this.input.keyboard.on('keydown-ENTER', (ev) => {
+      if (ev.repeat || this.leaving) return
+      this.leaving = true
       sfx(this, 'select')
       if (canContinue) this.scene.start('Street', { level: save.level, checkpoint: save.checkpoint || 0, bossPhase: save.bossPhase || 0 })
       else this.scene.start('Prologue')
@@ -71,7 +76,7 @@ export default class Title extends Phaser.Scene {
     this.add.text(640, 690, 'Based on A Course in Game Theory by Martin J. Osborne & Ariel Rubinstein (MIT Press, 1994). A fan-made learning game.', {
       fontFamily: 'Nunito', fontStyle: '800', fontSize: '15px', color: '#b9a6e0', align: 'center', wordWrap: { width: 1200 },
     }).setOrigin(0.5)
-    this.add.text(640, 640, 'Move: arrows / WASD    Punch: J    Kick: K    Throw: L    Blitz: →→J    Talk: Space    Music: M', {
+    this.add.text(640, 640, 'Move: arrows / WASD    Punch: J    Kick: K    Throw: L    Dash: →→    Blitz: →→J    Talk: Space    Music: M    Pause: Esc', {
       fontFamily: 'Nunito', fontStyle: '800', fontSize: '18px', color: '#ffffff',
     }).setOrigin(0.5)
   }

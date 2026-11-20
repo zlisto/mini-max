@@ -4,6 +4,8 @@ import Title from './scenes/Title.js'
 import Prologue from './scenes/Prologue.js'
 import Street from './scenes/Street.js'
 import End from './scenes/End.js'
+import Pause from './scenes/Pause.js'
+import Ending from './scenes/Ending.js'
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -12,16 +14,16 @@ const game = new Phaser.Game({
   height: 720,
   backgroundColor: '#0b0614',
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [Boot, Title, Prologue, Street, End],
+  scene: [Boot, Title, Prologue, Street, End, Ending, Pause],
 })
 
 // Dev hooks for playtests and critics.
-const SCENES = ['Title', 'Prologue', 'Street', 'End']
+const SCENES = ['Title', 'Prologue', 'Street', 'End', 'Ending']
 window.__minimax = {
   game,
-  // warp('Street', { level: 'w2', checkpoint: 2 })  checkpoints: 0 start, 1 second wave, 2 elite standoff, 3 boss
+  // warp('Street', { level: 'w2', checkpoint: 2 })  checkpoints: 0 start, 1 second wave, 2 elite standoff, 3 wave before the boss, 4 boss
   warp(name, data = {}) {
-    SCENES.forEach((s) => game.scene.isActive(s) && game.scene.stop(s))
+    ;[...SCENES, 'Pause'].forEach((s) => (game.scene.isActive(s) || game.scene.isPaused(s)) && game.scene.stop(s))
     game.scene.start(name, data)
   },
   active() { return SCENES.filter((s) => game.scene.isActive(s)) },
