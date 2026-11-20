@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { LOCAL_MUSIC } from '../data/localMusic.js'
+import { TOUR_MUSIC } from '../data/localMusic.js'
 
 export default class Boot extends Phaser.Scene {
   constructor() { super('Boot') }
@@ -15,10 +15,10 @@ export default class Boot extends Phaser.Scene {
     this.registry.set('manifest', manifest)
     const isJpg = (id) => id.endsWith('_far') || id.endsWith('_ground') || id === 'prologue_bg' || id === 'title_bg'
     Object.keys(manifest).forEach((id) => this.load.image(id, `art/${id}.${isJpg(id) ? 'jpg' : 'png'}`))
-    // on the dev server, a world can play a local track instead (src/data/localMusic.js); the deploy never ships those files
-    const local = import.meta.env.DEV ? LOCAL_MUSIC : {}
+    // each world's tour track (src/data/localMusic.js) replaces its original one
+    const local = TOUR_MUSIC
     const audio = this.load.audio.bind(this.load)
-    this.load.audio = (key, urls) => audio(key, local[key] ? [`music/${encodeURIComponent(local[key])}`] : urls)
+    this.load.audio = (key, urls) => audio(key, local[key] ? [`music/tour/${local[key]}`] : urls)
     this.load.audio('level_01', ['music/level_01.ogg', 'music/Level_01.mp3'])
     this.load.audio('level_02', ['music/level_02.ogg', 'music/Level_02.mp3'])
     this.load.audio('level_03', ['music/level_03.ogg', 'music/level_03.mp3'])
