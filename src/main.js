@@ -6,7 +6,7 @@ import Street from './scenes/Street.js'
 import End from './scenes/End.js'
 import Pause from './scenes/Pause.js'
 import Ending from './scenes/Ending.js'
-import { isTouchDevice, installTouch, installTapToPlay, patchTextForTouch } from './systems/touch.js'
+import { isTouchDevice, installTouch, installTapToPlay, patchTextForTouch, installFullscreenButton } from './systems/touch.js'
 
 // phones and tablets: key names in the text become button names
 window.__touch = isTouchDevice() || /[?&]touch=1/.test(location.search)
@@ -25,7 +25,7 @@ const game = new Phaser.Game({
 })
 
 // phones and tablets get on-screen controls and a tap-to-play screen
-if (window.__touch) { installTouch(game); installTapToPlay(game) }
+if (window.__touch) { installTouch(game); installTapToPlay(game) } else installFullscreenButton()
 
 // Dev hooks for playtests and critics.
 const SCENES = ['Title', 'Prologue', 'Street', 'End', 'Ending']

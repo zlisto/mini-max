@@ -37,6 +37,7 @@ const CSS = `
 #touch .ok    { right: calc(12px + env(safe-area-inset-right)); bottom: calc(12px + env(safe-area-inset-bottom)); width: 78px; height: 78px; font-size: 24px; background: rgba(255,209,102,.88); color: #2a0f4a; text-shadow: none; }
 #touch .small { width: 42px; height: 42px; font-size: 17px; background: rgba(20,8,30,.6); }
 #touch .outfit { font-size: 13px; }
+#touch .full svg { pointer-events: none; }
 #touch .pad { width: 52px; height: 52px; font-size: 22px; border-radius: 16px; background: rgba(20,8,30,.62); }
 #touch .pu { right: calc(68px + env(safe-area-inset-right)); bottom: calc(126px + env(safe-area-inset-bottom)); }
 #touch .pd { right: calc(68px + env(safe-area-inset-right)); bottom: calc(6px + env(safe-area-inset-bottom)); }
@@ -139,6 +140,9 @@ export function installTouch(game) {
   const pause = button('small pause', '❚❚', () => { release(); tapKey('Escape') })
   const mute = button('small mute', '♪', () => { tapKey('KeyM'); setTimeout(paintMute, 0) })
   const outfit = button('small outfit', 'LOOK', () => tapKey('KeyO'))
+  const full = button('small full', '', () => {})
+  full.addEventListener('touchend', () => toggleFullscreen())
+  document.addEventListener('fullscreenchange', () => paintFull(full)); document.addEventListener('webkitfullscreenchange', () => paintFull(full))
   const paintMute = () => { mute.innerHTML = isMuted() ? '🔇' : '🔊' }
   paintMute()
 
@@ -170,6 +174,8 @@ export function installTouch(game) {
       show(pause, (street || keys.includes('Prologue')) && !paused)
       show(mute, !paused && keys.length > 0)
       show(outfit, brawl && !!(s && s.L && s.L.outfits))
+      show(full, canFullscreen())
+      paintFull(full)
     }
     if (brawl && s) { blitz.classList.toggle('off', s.blitzCd > 0); blitz.style.setProperty('--p', `${Math.round(100 * (1 - (s.blitzCd || 0) / (s.blitzMax || 3.5)))}%`) }
     requestAnimationFrame(tick)
@@ -179,7 +185,7 @@ export function installTouch(game) {
     const c = game.canvas.getBoundingClientRect()
     const margin = window.innerWidth - c.right
     const side = margin >= 46
-    ;[pause, mute, outfit].forEach((b, i) => {
+    ;[pause, mute, full, outfit].forEach((b, i) => {
       b.style.right = side ? `${Math.max(2, (margin - 42) / 2)}px` : `${8 + i * 50}px`
       b.style.top = side ? `${c.top + 8 + i * 50}px` : `${c.top + c.height * 0.23}px`
     })
@@ -200,6 +206,43 @@ export function installTouch(game) {
   if (portrait.addEventListener) portrait.addEventListener('change', onTurn); else portrait.addListener(onTurn)
 }
 
+// ---- full screen: one button goes in and out (browsers that can't, like Safari on iPhone, don't show it)
+const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement
+export const canFullscreen = () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled) && !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen) && !window.matchMedia('(display-mode: standalone)').matches
+export function toggleFullscreen() {
+  try {
+    if (fsEl()) {
+      if (screen.orientation && screen.orientation.unlock) try { screen.orientation.unlock() } catch { /* not locked */ }
+      const exit = document.exitFullscreen || document.webkitExitFullscreen
+      if (exit) { const p = exit.call(document); if (p && p.catch) p.catch(() => {}) }
+    } else {
+      const de = document.documentElement, fs = de.requestFullscreen || de.webkitRequestFullscreen
+      const p = fs.call(de, { navigationUI: 'hide' })
+      if (p && p.then) p.then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {})).catch(() => {})
+    }
+  } catch { /* not allowed */ }
+}
+const ICON_IN = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M2 7V2h5M13 2h5v5M18 13v5h-5M7 18H2v-5"/></svg>'
+const ICON_OUT = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M7 2v5H2M18 7h-5V2M13 18v-5h5M2 13h5v5"/></svg>'
+const paintFull = (b) => { const on = !!fsEl(); b.innerHTML = on ? ICON_OUT : ICON_IN; b.title = on ? 'Leave full screen' : 'Full screen'; b.setAttribute('aria-label', b.title) }
+
+// Desktop: a small corner button (Esc also leaves full screen, as browsers do)
+export function installFullscreenButton() {
+  if (!canFullscreen()) return
+  const style = document.createElement('style')
+  style.textContent = '#fsbtn { position: fixed; top: 6px; right: 6px; z-index: 25; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 2px solid rgba(255,255,255,.45); background: rgba(20,8,30,.6); color: #fff; font: 18px sans-serif; cursor: pointer; opacity: .55; } #fsbtn:hover { opacity: 1; }'
+  document.head.appendChild(style)
+  const b = document.createElement('button')
+  b.id = 'fsbtn'
+  b.tabIndex = -1
+  b.addEventListener('mousedown', (e) => e.preventDefault())
+  paintFull(b)
+  b.addEventListener('click', (e) => { e.preventDefault(); toggleFullscreen(); b.blur() })
+  document.addEventListener('fullscreenchange', () => paintFull(b))
+  document.addEventListener('webkitfullscreenchange', () => paintFull(b))
+  document.body.appendChild(b)
+}
+
 // Before the first tap: go fullscreen and sideways where the browser allows it, and wake the sound.
 export function installTapToPlay(game) {
   const gate = document.createElement('div')
@@ -218,11 +261,7 @@ export function installTapToPlay(game) {
   const go = (e) => {
     e.preventDefault()
     gate.remove()
-    const de = document.documentElement
-    const fs = de.requestFullscreen || de.webkitRequestFullscreen
-    if (fs && !window.matchMedia('(display-mode: standalone)').matches) {
-      try { const p = fs.call(de, { navigationUI: 'hide' }); if (p && p.then) p.then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {})).catch(() => {}) } catch { /* not allowed */ }
-    }
+    if (canFullscreen() && !fsEl()) toggleFullscreen()
     try { const ctx = game.sound.context; if (ctx && ctx.state !== 'running') ctx.resume() } catch { /* no web audio */ }
   }
   gate.addEventListener('touchend', go, { passive: false })
