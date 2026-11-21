@@ -1,3 +1,4 @@
+import { loadArt } from '../systems/art.js'
 import Phaser from 'phaser'
 import { LEVELS } from '../data/levels.js'
 import { bindMuteKey } from '../systems/audio.js'
@@ -9,7 +10,10 @@ export default class End extends Phaser.Scene {
 
   init(data) { this.L = LEVELS[data.level] || LEVELS.w1 }
 
+  preload() { loadArt(this, new Set([this.L.art.far])) }
+
   create() {
+    this.leaving = false
     const L = this.L, E = L.end
     this.cameras.main.fadeIn(600)
     bindMuteKey(this)
@@ -32,7 +36,7 @@ export default class End extends Phaser.Scene {
     const btn = (x, label, go) => {
       const b = this.add.text(x, btnY, label, { fontFamily: 'Bangers', fontSize: '32px', color: '#fff', backgroundColor: '#2a0f4a', padding: { x: 18, y: 8 } })
         .setOrigin(0.5).setInteractive({ useHandCursor: true })
-      b.on('pointerdown', () => { sfx(this, 'select'); go() }).on('pointerover', () => { b.setColor('#ffd166'); sfx(this, 'hover') }).on('pointerout', () => b.setColor('#fff'))
+      b.on('pointerdown', () => { if (this.leaving) return; this.leaving = true; sfx(this, 'select'); go() }).on('pointerover', () => { b.setColor('#ffd166'); sfx(this, 'hover') }).on('pointerout', () => b.setColor('#fff'))
       return b
     }
     if (E.next) {

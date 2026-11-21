@@ -175,8 +175,8 @@ export class CoreStandoff {
       const alone = [0, 1, 2].map((i) => `${N[i]} ${v[1 << i]}`).join('   ')
       t(X + 34, top + 16, `On their own:  ${alone}`, BLUE)
       t(X + 34, top + 40, `${N[0]} + ${N[1]}: ${v[3]}     ${N[0]} + ${N[2]}: ${v[5]}     ${N[1]} + ${N[2]}: ${v[6]}`, BLUE)
-      t(X + 34, top + 64, `All three together: ${v[7]}`, BLUE)
-      if (c.mode === 'walkout') t(X + W - 34, top + 64, `Mural's split:  ${c.x.map((k, i) => `${N[i]} ${k}`).join('  ')}`, PINK, 1)
+      t(X + 34, top + 64, window.__touch && c.mode === 'walkout' ? `All three: ${v[7]}` : `All three together: ${v[7]}`, BLUE)
+      if (c.mode === 'walkout') t(X + W - 34, top + 64, `${window.__touch ? 'Split' : "Mural's split"}:  ${c.x.map((k, i) => `${N[i]} ${k}`).join('  ')}`, PINK, 1)
       return
     }
     if (c.mode === 'market') {

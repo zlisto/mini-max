@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { loadArt, needsFor } from '../systems/art.js'
 import { playMusic, bindMuteKey } from '../systems/audio.js'
 import { sfx } from '../systems/sfx.js'
 import { loadSave, writeSave } from '../systems/save.js'
@@ -6,6 +7,8 @@ import { LEVELS } from '../data/levels.js'
 
 export default class Title extends Phaser.Scene {
   constructor() { super('Title') }
+
+  preload() { loadArt(this, needsFor('Title')) }
 
   create() {
     playMusic(this, 'title_theme', 0.5)
@@ -24,8 +27,9 @@ export default class Title extends Phaser.Scene {
     const save = loadSave()
     const canContinue = save.scene === 'Street' && LEVELS[save.level] && (save.level !== 'w1' || save.checkpoint > 0)
     const label = canContinue ? `PRESS ENTER: CONTINUE ${LEVELS[save.level].title}` : 'PRESS ENTER'
-    const start = this.add.text(640, 430, label, { fontFamily: 'Bangers', fontSize: '44px', color: '#fff' }).setOrigin(0.5)
+    const start = this.add.text(640, window.__touch ? 404 : 430, label, { fontFamily: 'Bangers', fontSize: '44px', color: '#fff' }).setOrigin(0.5)
     this.tweens.add({ targets: start, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 })
+    start.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.input.keyboard.emit('keydown-ENTER', { repeat: false }))
 
     // Level select, built from the level data: pick a world (←/→ or click), then where to start (1/2/3 or click)
     const go = (level, checkpoint) => () => { writeSave({ eliteFight: null, bossPhase: 0 }); this.scene.start('Street', { level, checkpoint }) }
@@ -36,10 +40,12 @@ export default class Title extends Phaser.Scene {
     })
     worlds.push({ id: 'end', label: 'Ending', entries: [['Ending', () => this.scene.start('Ending')]] })
     let sel = Math.max(0, worlds.findIndex((w) => w.id === save.level))
-    this.add.text(640, 494, 'LEVEL SELECT   ←/→ world   1/2/3 start', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '16px', color: '#b9a6e0' }).setOrigin(0.5)
+    this.add.text(640, window.__touch ? 456 : 494, 'LEVEL SELECT   ←/→ world   1/2/3 start', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '16px', color: '#b9a6e0' }).setOrigin(0.5)
+    const perRow = window.__touch ? Math.ceil(worlds.length / 2) : worlds.length
     const tabs = worlds.map((w, i) => {
-      const x = 640 + (i - (worlds.length - 1) / 2) * Math.min(96, 1180 / worlds.length)
-      const b = this.add.text(x, 526, w.label, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '17px', color: '#fff', backgroundColor: '#2a0f4acc', padding: { x: 9, y: 5 } })
+      const row = Math.floor(i / perRow), col = i % perRow
+      const x = 640 + (col - (perRow - 1) / 2) * Math.min(window.__touch ? 172 : 96, 1180 / perRow)
+      const b = this.add.text(x, window.__touch ? 500 + row * 60 : 526, w.label, { fontFamily: 'Nunito', fontStyle: '800', fontSize: window.__touch ? '26px' : '17px', color: '#fff', backgroundColor: '#2a0f4acc', padding: { x: window.__touch ? 16 : 9, y: window.__touch ? 13 : 5 } })
         .setOrigin(0.5).setInteractive({ useHandCursor: true })
       b.on('pointerdown', () => { sel = i; sfx(this, 'hover'); paint() })
       return b
@@ -51,9 +57,9 @@ export default class Title extends Phaser.Scene {
       const E = worlds[sel].entries
       E.forEach(([label, fn], k) => {
         const x = 640 + (k - (E.length - 1) / 2) * 300
-        const b = this.add.text(x, 578, `${k + 1}  ${label}`, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '19px', color: '#fff', backgroundColor: '#2a0f4acc', padding: { x: 12, y: 7 } })
+        const b = this.add.text(x, window.__touch ? 628 : 578, window.__touch ? label : `${k + 1}  ${label}`, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '19px', color: '#fff', backgroundColor: '#2a0f4acc', padding: { x: 14, y: window.__touch ? 14 : 7 } })
           .setOrigin(0.5).setInteractive({ useHandCursor: true })
-        b.on('pointerdown', () => { sfx(this, 'select'); fn() })
+        b.on('pointerdown', () => { if (this.leaving) return; this.leaving = true; sfx(this, 'select'); fn() })
         b.on('pointerover', () => { b.setColor('#ffd166'); sfx(this, 'hover') })
         b.on('pointerout', () => b.setColor('#fff'))
         entryBtns.push(b)

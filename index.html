@@ -2,16 +2,26 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0614" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Mini Max" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
     <title>Mini Max</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@600;800&display=swap" rel="stylesheet" />
     <style>
-      html, body { margin: 0; height: 100%; background: #0b0614; overflow: hidden; }
-      #game { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
-      #rotate { display: none; position: fixed; left: 0; right: 0; top: 12px; text-align: center; color: #ffd166; font: 800 16px Nunito, sans-serif; z-index: 10; pointer-events: none; }
-      @media (orientation: portrait) and (max-width: 820px) { #rotate { display: block; } }
+      html, body { margin: 0; height: 100%; background: #0b0614; overflow: hidden; overscroll-behavior: none; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+      #game { position: fixed; inset: 0; }
+      .touch #game { right: 52px; right: calc(52px + env(safe-area-inset-right)); }
+      #rotate { display: none; position: fixed; inset: 0; z-index: 40; background: #0b0614; color: #ffd166; font: 800 20px Nunito, sans-serif; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 24px; }
+      #rotate .phone { width: 54px; height: 92px; border: 5px solid #ff5fa2; border-radius: 12px; animation: turn 1.8s ease-in-out infinite; }
+      @keyframes turn { 0%, 20% { transform: rotate(0) } 55%, 100% { transform: rotate(-90deg) } }
+      @media (orientation: portrait) and (pointer: coarse) { #rotate { display: flex; } }
       /* keep the fonts warm so Phaser can measure them */
       .fontwarm { position: absolute; left: -999px; font-family: Bangers; }
       .fontwarm2 { position: absolute; left: -999px; font-family: Nunito; font-weight: 800; }
@@ -20,7 +30,7 @@
   <body>
     <div class="fontwarm">.</div><div class="fontwarm2">.</div>
     <div id="game"></div>
-    <div id="rotate">Turn your phone sideways for the best view ⟳</div>
+    <div id="rotate"><div class="phone"></div>Turn your phone sideways to play</div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

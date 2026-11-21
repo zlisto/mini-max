@@ -6,6 +6,12 @@ import Street from './scenes/Street.js'
 import End from './scenes/End.js'
 import Pause from './scenes/Pause.js'
 import Ending from './scenes/Ending.js'
+import { isTouchDevice, installTouch, installTapToPlay, patchTextForTouch } from './systems/touch.js'
+
+// phones and tablets: key names in the text become button names
+window.__touch = isTouchDevice() || /[?&]touch=1/.test(location.search)
+if (window.__touch) document.documentElement.classList.add('touch')
+if (window.__touch) patchTextForTouch(Phaser)
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -15,7 +21,11 @@ const game = new Phaser.Game({
   backgroundColor: '#0b0614',
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   scene: [Boot, Title, Prologue, Street, End, Ending, Pause],
+  input: { activePointers: 3 },
 })
+
+// phones and tablets get on-screen controls and a tap-to-play screen
+if (window.__touch) { installTouch(game); installTapToPlay(game) }
 
 // Dev hooks for playtests and critics.
 const SCENES = ['Title', 'Prologue', 'Street', 'End', 'Ending']

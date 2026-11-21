@@ -106,11 +106,11 @@ export class MasqueStandoff {
     const c = this.card
     const titles = { bayes: 'BEHIND THE MASK', never: 'THE DOOR NOBODY OPENS', dominated: 'A STEP NOBODY TAKES', posterior: 'BEER OR QUICHE', intuit: 'THE ODD ORDER', tremble: 'THE TREMBLING HAND' }
     this.c.add(txt(X + W / 2, Y + 20, titles[this.mode], { fontFamily: 'Bangers', fontSize: '26px', color: '#ffd166' }).setOrigin(0.5))
-    const top = Y + 110
+    const top = Y + (window.__touch && this.mode === 'bayes' ? 126 : 110) // phones: room for the bigger mix line
     if (this.mode === 'bayes') {
       const m = c.mix
       this.c.add(txt(X + 20, Y + 42, 'Domino bows out, or steps in and dances M or R. You only see that he stepped in, never which step.', { fontSize: '14px', color: CREAM }))
-      this.c.add(txt(X + 20, Y + 82, `His mix †:  bows out ${fmt(m.out)},  M ${fmt(m.M)},  R ${fmt(m.R)}`, { color: BLUE }))
+      this.c.add(txt(X + 20, Y + (window.__touch ? 88 : 82), (window.__touch ? `His mix †: out ${fmt(m.out)}, M ${fmt(m.M)}, R ${fmt(m.R)}` : `His mix †:  bows out ${fmt(m.out)},  M ${fmt(m.M)},  R ${fmt(m.R)}`), { color: BLUE, noFloor: true }))
       this.drawTree(X, top, W, c.tree, { out: m.out > 0 ? 'bows out' : '' })
     } else if (this.mode === 'never') {
       this.c.add(txt(X + 20, Y + 42, 'Domino always bows out, so your spot is never reached. A full plan still says what you would do there. His payoffs are in blue.', { fontSize: '14px', color: CREAM }))
@@ -158,7 +158,7 @@ export class MasqueStandoff {
     if (on) {
       this.c.add(s.add.text(x - 48, y, '◀', { fontSize: '18px', color: '#ffd166' }).setOrigin(0.5))
       this.c.add(s.add.text(x + 48, y, '▶', { fontSize: '18px', color: '#ffd166' }).setOrigin(0.5))
-      this.c.add(s.add.text(x + 72, y, '0 no chance, 1 certain', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '14px', color: ROSE }).setOrigin(0, 0.5))
+      this.c.add(s.add.text(x + 72, y, window.__touch ? '0 never · 1 sure' : '0 no chance, 1 certain', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '14px', color: ROSE }).setOrigin(0, 0.5))
     }
   }
 

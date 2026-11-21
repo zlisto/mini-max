@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { loadArt, needsFor } from '../systems/art.js'
 import { bindPauseKey } from './Pause.js'
 import { Dialogue } from '../ui/Dialogue.js'
 import { Fighter } from '../actors/Fighter.js'
@@ -10,6 +11,8 @@ import { sfx } from '../systems/sfx.js'
 // Prologue: the Prisoner's Dilemma (Example 16.2, Figure 17.1, pp.16-17).
 export default class Prologue extends Phaser.Scene {
   constructor() { super('Prologue') }
+
+  preload() { loadArt(this, needsFor('Prologue')) }
 
   create() {
     this.cameras.main.fadeIn(500)
@@ -58,13 +61,13 @@ export default class Prologue extends Phaser.Scene {
     this.rowOrder.forEach((r, i) => {
       const y = -30 + i * 100
       this.rowY[r] = y
-      const key = i === 0 ? 'J' : 'L'
+      const key = window.__touch ? '' : i === 0 ? 'J' : 'L'
       const hit = this.add.rectangle(-150, y, 280, 84, 0xff5fa2, 0.0).setStrokeStyle(2, 0xff5fa2, 0.6)
       hit.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.choose(r))
       this.rowHit[r] = hit
       c.add(hit)
       c.add(txt(-150, y - 12, `Lisa: ${PD.label[r]}`, { color: '#ff5fa2', fontSize: '22px' }))
-      c.add(txt(-150, y + 18, `[${key}]`, { color: '#ffd166', fontSize: '16px' }))
+      if (key) c.add(txt(-150, y + 18, `[${key}]`, { color: '#ffd166', fontSize: '16px' }))
       ;['quiet', 'sell'].forEach((col, j) => {
         const x = 100 + j * 125
         const cell = this.add.rectangle(x, y, 118, 84, 0x2a0f4a, 1).setStrokeStyle(2, 0x6b5b8a)

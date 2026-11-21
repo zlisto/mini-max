@@ -1,3 +1,4 @@
+import { touchText } from '../systems/touch.js'
 import Phaser from 'phaser'
 import { sfx, VOICE } from '../systems/sfx.js'
 
@@ -86,7 +87,7 @@ export class Dialogue {
     }
     this.name.setText(who ? who.name : '').setColor(who ? who.color : '#fff').setX(tx)
     this.text.setX(tx).setY(who ? this.y + 46 : this.y + 40).setFontStyle(who ? '800' : 'italic 800')
-    this.full = line.text
+    this.full = touchText(line.text)
     this.shown = 0
     this.text.setText('')
   }

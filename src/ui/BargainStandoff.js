@@ -83,7 +83,7 @@ export class BargainStandoff {
     const txt = (x, y, str, o = {}) => s.add.text(x, y, str, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '15px', color: '#fff', ...o }).setOrigin(0.5)
     const d = this.card.d
     this.c.add(txt(X + W / 2, Y + 20, title, { fontFamily: 'Bangers', fontSize: '26px', color: '#ffd166' }))
-    this.c.add(txt(X + W / 2, Y + 44, `after a round's wait a coin is worth ${this.pc(d[0])} to you and ${this.pc(d[1])} to ${this.enemyName}`, { fontSize: '14px', color: '#e8dcff' }))
+    this.c.add(txt(X + W / 2, Y + 44, `after a round's wait a coin is worth ${this.pc(d[0])} to you and ${this.pc(d[1])} to ${this.enemyName}`, { fontSize: '14px', color: '#e8dcff', align: 'center', wordWrap: { width: W - 24 } }))
     return { s, X, Y, W, H, txt }
   }
 
@@ -150,7 +150,7 @@ export class BargainStandoff {
       ;['ACCEPT', 'REJECT'].forEach((lab, k) => {
         const bx = X + W / 2 + (k === 0 ? -70 : 70)
         const r = s.add.rectangle(bx, Y + 222, 110, 30, this.choice === k ? 0x5a2a8a : 0x2a0f4a).setStrokeStyle(3, this.choice === k ? 0xffffff : 0x6b5b8a)
-        r.setInteractive({ useHandCursor: true }).on('pointerdown', () => { this.choice = k; this.answer() })
+        r.setInteractive({ useHandCursor: true }).on('pointerdown', () => { if (window.__touch && this.choice !== k) { this.choice = k; this.draw(); return } this.choice = k; this.answer() })
         this.c.add([r, txt(bx, Y + 222, lab, { fontFamily: 'Bangers', fontSize: '22px', color: '#ffd166' })])
       })
     }

@@ -88,7 +88,7 @@ export class RematchStandoff {
       const m = c.mode === 'unravel' ? { name: `${c.pairs[mi].a.name}`, desc: `against ${c.pairs[mi].b.name}` } : c.menu[mi], y = Y + 124 + row * rh
       const sel = row === this.cursor && !this.stage
       const r = s.add.rectangle(X + W / 2, y, W - 32, rh - 2, sel ? 0x3a1a5a : 0x1a1030).setStrokeStyle(2, sel ? 0xffffff : 0x4a3f5e)
-      r.setInteractive({ useHandCursor: true }).on('pointerdown', () => { if (this.stage) return; this.cursor = row; this.armed = true; this.draw(); this.pickPlan() })
+      r.setInteractive({ useHandCursor: true }).on('pointerdown', () => { if (this.stage) return; if (window.__touch && this.cursor !== row) { this.cursor = row; this.draw(); return } this.cursor = row; this.armed = true; this.draw(); this.pickPlan() })
       this.c.add(r)
       this.c.add(txt(X + 28, y, m.name, { color: PINK }).setOrigin(0, 0.5))
       this.c.add(txt(X + (c.mode === 'disc' ? 190 : 222), y, m.desc, { fontSize: '13px', color: '#e8dcff' }).setOrigin(0, 0.5))

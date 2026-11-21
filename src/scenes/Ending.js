@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { loadArt, needsFor } from '../systems/art.js'
 import { bindPauseKey } from './Pause.js'
 import { Dialogue, WHO } from '../ui/Dialogue.js'
 import { Fighter } from '../actors/Fighter.js'
@@ -27,6 +28,8 @@ const SETLIST = [
 
 export default class Ending extends Phaser.Scene {
   constructor() { super('Ending') }
+
+  preload() { loadArt(this, needsFor('Ending')) }
 
   create() {
     this.pages = null; this.setlistLabel = null; this.credits = false; this.leaving = false

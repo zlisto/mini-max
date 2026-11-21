@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { loadArt, needsFor } from '../systems/art.js'
 import { bindPauseKey } from './Pause.js'
 import { Fighter } from '../actors/Fighter.js'
 import { Dialogue } from '../ui/Dialogue.js'
@@ -62,6 +63,8 @@ export default class Street extends Phaser.Scene {
     const bossIdx = this.L.triggers.findIndex((t) => t.standoff === 'boss')
     this.bossPhase = this.checkpoint === bossIdx ? (data.bossPhase ?? (sameLevel ? save.bossPhase : 0) ?? 0) : 0
   }
+
+  preload() { loadArt(this, needsFor('Street', { level: this.levelId })) }
 
   create() {
     writeSave({ scene: 'Street', level: this.levelId, checkpoint: this.checkpoint, bossPhase: this.bossPhase })
@@ -191,9 +194,10 @@ export default class Street extends Phaser.Scene {
     this.blitzLabel = this.add.text(366, 660, 'BLITZ ▶▶J', { fontFamily: 'Bangers', fontSize: '20px', color: '#ff5fa2', stroke: '#000', strokeThickness: 4 }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(d)
     this.muteLabel = this.add.text(1252, 652, '', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '15px', color: '#b9a6e0' })
       .setOrigin(1, 0).setScrollFactor(0).setDepth(d)
-    this.foeLabel = this.add.text(1252, 686, '', { fontFamily: 'Bangers', fontSize: '24px', color: '#ff9a5c' }).setOrigin(1, 0).setScrollFactor(0).setDepth(d)
-    this.foeBack = this.add.rectangle(1000, 698, 160, 16, 0x3a1a5a).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d).setVisible(false)
-    this.foeBar = this.add.rectangle(1000, 698, 160, 16, 0xff9a5c).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d).setVisible(false)
+    const foeX = window.__touch ? 960 : 1252 // phones keep the foe's bar left of the buttons
+    this.foeLabel = this.add.text(foeX, 686, '', { fontFamily: 'Bangers', fontSize: '24px', color: '#ff9a5c' }).setOrigin(1, 0).setScrollFactor(0).setDepth(d)
+    this.foeBack = this.add.rectangle(foeX - 252, 698, 160, 16, 0x3a1a5a).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d).setVisible(false)
+    this.foeBar = this.add.rectangle(foeX - 252, 698, 160, 16, 0xff9a5c).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d).setVisible(false)
     // the masquerade's guest list: how many of each type are still behind a mask
     this.maskHidden = { punch: 0, kick: 0, throw: 0 }
     this.maskHud = this.add.text(640, 134, '', { fontFamily: 'Bangers', fontSize: '28px', color: '#ffd6c8', stroke: '#000', strokeThickness: 5, backgroundColor: '#140814cc', padding: { x: 12, y: 4 } }).setOrigin(0.5).setScrollFactor(0).setDepth(d).setVisible(false)
@@ -225,16 +229,34 @@ export default class Street extends Phaser.Scene {
     const icon = this.add.image(606, 0, 'tempo_sprite').setScale(0.32)
     const t = this.add.text(650, 0, '', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '18px', color: '#fff', wordWrap: { width: 590 }, lineSpacing: 2 })
     c.add([g, icon, t])
-    return {
+    let left = 560, last = null
+    const cap = {
+      // phones: the card panel grows, so Tempo's box starts where the card ends
+      setLeft: (x) => { x = Math.round(x); if (x === left) return; left = x; icon.setX(left + 46); t.setX(left + 90).setWordWrapWidth(1150 - left); if (last && c.visible) cap.show(...last) },
       show: (s, y = 16) => {
+        last = [s, y]
         t.setText(s).setY(y + 12)
         const h = Math.max(70, t.height + 24)
-        g.clear().fillStyle(0x0d0820, 0.92).fillRoundedRect(560, y, 696, h, 12).lineStyle(2, 0xffd166, 1).strokeRoundedRect(560, y, 696, h, 12)
+        g.clear().fillStyle(0x0d0820, 0.92).fillRoundedRect(left, y, 1256 - left, h, 12).lineStyle(2, 0xffd166, 1).strokeRoundedRect(left, y, 1256 - left, h, 12)
         icon.setY(y + h / 2)
         c.setVisible(true).setAlpha(1)
       },
       hide: () => c.setVisible(false),
     }
+    return cap
+  }
+
+  // phones: a card panel grows by up to 1.2 (as far as the screen allows), and Tempo's box makes room
+  fitCardForTouch() {
+    const c = this.so && this.so.c
+    if (!c || !c.visible || !c.list.length) return
+    const k = c.scaleX || 1, b = c.getBounds()
+    const right = (b.right) / k, bottom = b.bottom / k
+    if (right > 900) { if (k !== 1) c.setScale(1); this.caption.setLeft(560); return } // wide cards (the W2 wheel) stay as they are
+    const edge = Math.max(right, 680)
+    const want = Math.max(1, Math.min(1.2, 712 / bottom, edge / right))
+    if (Math.abs(want - k) > 0.01) c.setScale(want)
+    this.caption.setLeft(Math.max(560, right * want + 8))
   }
 
   // ---------------------------------------------------------------- fx
@@ -392,7 +414,7 @@ export default class Street extends Phaser.Scene {
       this.checkPickups()
       if (this.L.windOrbs) for (const pk of this.pickups) if (pk.type === 'payoff') { const g = Math.max(2, 6 - Math.floor((this.elapsed - pk.born) / 3)); pk.img.setDisplaySize(36 + g * 6, 36 + g * 6) }
       const blitzReady = pPunch && this.tap && this.tap.armed != null && this.elapsed - this.tap.armed < 0.4 && this.tap.dir === L.facing && this.blitzCd <= 0
-      const dashReady = !pPunch && this.tap && this.tap.armed != null && !this.tap.dashed && this.tap.gap < 0.22 && this.elapsed - this.tap.armed < 0.15
+      const dashReady = !pPunch && this.tap && this.tap.armed != null && !this.tap.dashed && this.tap.gap < (window.__touch ? 0.3 : 0.22) && this.elapsed - this.tap.armed < (window.__touch ? 0.2 : 0.15)
       if (blitzReady) { this.tap = null; this.blitz() } else if (dashReady) { this.tap.dashed = true; this.dash(this.tap.dir) } else if (pPunch || pKick) {
         L.combo = this.elapsed - L.lastStrikeEnd < 0.35 ? (L.combo % 3) + 1 : 1
         this.act(pPunch ? 'punch' : 'kick')
@@ -1047,8 +1069,10 @@ export default class Street extends Phaser.Scene {
     this.fadeProps(true)
     this.toFree()
     const camX = this.locked
-    this.tweens.add({ targets: L, x: camX + 470, y: 600, duration: 500 })
-    this.tweens.add({ targets: enemy, x: camX + 860, y: 600, duration: 900 })
+    // phones show the card bigger, so the fighters stand further right, clear of it
+    const dx = window.__touch ? 300 : 0
+    this.tweens.add({ targets: L, x: camX + 470 + dx, y: 600, duration: 500 })
+    this.tweens.add({ targets: enemy, x: camX + 860 + dx * 0.4, y: 600, duration: 900 })
     L.face(1)
     enemy.face(-1)
   }
@@ -1488,6 +1512,9 @@ export default class Street extends Phaser.Scene {
     const dt = Math.min(dms / 1000, 0.05)
     this.elapsed += dt
     this.blitzCd = Math.max(0, this.blitzCd - dt)
+    this.blitzMax = BLITZ_CD
+    if (window.__touch && this.mode === 'standoff') this.fitCardForTouch()
+    else if (window.__touch && this.caption.setLeft) this.caption.setLeft(560)
     this.dlg.update(dt)
     if (this.L.outfits && this.mode === 'brawl' && this.presses.take('KeyO')) this.switchOutfit()
     if (this.mode === 'brawl') {

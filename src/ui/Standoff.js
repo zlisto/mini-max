@@ -7,6 +7,7 @@ import { MOVES, MOVE_LABEL, MOVE_KEY, makeStandoff, fogCells, enemyPick, maxminR
 // phase = { hp, view: 'lisa' | 'enemy', fog: bool, value, timer?: seconds }  (no timer = take your time)
 export class Standoff {
   constructor(scene, { lisa, enemy, enemyName, phases, onPhaseWin, onLose, say }) {
+    this.touchMoves = true // phones answer this card with the PUNCH, KICK and THROW buttons
     Object.assign(this, { scene, lisa, enemy, enemyName, phases, onPhaseWin, onLose, say })
     this.phaseIdx = 0
     this.c = scene.add.container(0, 0).setScrollFactor(0).setDepth(4200).setVisible(false)
@@ -61,7 +62,7 @@ export class Standoff {
       this.rowHit[r] = hit
       this.c.add(hit)
       this.c.add(txt(X + 92, y - 9, `Lisa: ${MOVE_LABEL[MOVES[r]]}`, { color: '#ff5fa2' }))
-      this.c.add(txt(X + 92, y + 13, `[${MOVE_KEY[MOVES[r]]}]`, { color: '#ffd166', fontSize: '14px' }))
+      if (!window.__touch) this.c.add(txt(X + 92, y + 13, `[${MOVE_KEY[MOVES[r]]}]`, { color: '#ffd166', fontSize: '14px' }))
       this.colOrder.forEach((c, j) => {
         const x = this.gx + j * this.cellW
         const rect = s.add.rectangle(x, y, this.cellW - 6, this.cellH - 6, 0x2a0f4a).setStrokeStyle(2, 0x6b5b8a)
@@ -71,6 +72,7 @@ export class Standoff {
         this.paintCell(r, c)
       })
     })
+    if (window.__touch) this.c.add(txt(X + W / 2, Y + H - 40, 'Tap a row, or PUNCH, KICK or THROW', { color: '#ffd166', fontSize: '18px' }))
     this.timerBar = s.add.rectangle(X + 20, Y + H - 20, W - 40, 8, 0xff5fa2).setOrigin(0, 0.5)
     this.c.add(this.timerBar)
     this.c.each((o) => o.setScrollFactor && o.setScrollFactor(0)) // clickable on a scrolled camera
