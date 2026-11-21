@@ -1582,8 +1582,8 @@ export default class Street extends Phaser.Scene {
     this.blitzFill.setScale(Math.max(0.02, charge), 1).setFillStyle(ready ? 0xff5fa2 : 0x7a3a9a, ready ? 0.6 + 0.3 * Math.sin(this.elapsed * 8) : 0.85)
     this.blitzLabel.setText(window.__touch ? (ready ? 'BLITZ READY' : 'BLITZ') : (ready ? 'BLITZ READY  ▶▶J' : 'BLITZ ▶▶J')).setColor(ready ? '#ffffff' : '#c9b8e8')
     ;[this.blitzLabel, this.blitzPlate, this.blitzFill].forEach((o) => o.setVisible(this.mode !== 'standoff'))
-    this.legend.setVisible(!foe) // the brawl triangle does not apply in standoffs
-    if (this.mixParts) this.mixParts.forEach((o) => o.setVisible(!foe))
+    this.legend.setVisible(!foe && !bf) // the brawl triangle does not apply in standoffs, and the boss bar takes its place in a boss fight
+    if (this.mixParts) this.mixParts.forEach((o) => o.setVisible(!foe && !bf))
     if (this.habitBars) {
       const h = L.habits
       this.habitBars.forEach(({ m, bar }) => bar.setSize(28, h.length ? (34 * h.filter((x) => x === m).length) / 8 : 0))

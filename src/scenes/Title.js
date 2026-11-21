@@ -53,7 +53,7 @@ export default class Title extends Phaser.Scene {
     // the chosen world's start points pop up in bright pink right under its tab, with a pointer from the tab, so it's clear they're the way in
     const entryBtns = []
     const ROLE = ['START', 'MINI-BOSS', 'BOSS']
-    const entryY = window.__touch ? 642 : 604
+    const entryY = window.__touch ? 636 : 604
     const paint = () => {
       tabs.forEach((b, i) => b.setColor(i === sel ? '#1a0b2e' : '#fff').setBackgroundColor(i === sel ? '#ff5fa2' : '#2a0f4acc'))
       entryBtns.forEach((b) => { this.tweens.killTweensOf(b); b.destroy() }); entryBtns.length = 0
