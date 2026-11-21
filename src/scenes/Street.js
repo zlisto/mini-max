@@ -166,6 +166,7 @@ export default class Street extends Phaser.Scene {
 
   buildHud() {
     const d = 5000
+    const first = this.children.list.length
     this.habitBars = null // per level (the scene object is reused between levels)
     this.add.rectangle(0, 676, 1280, 44, 0x0b0614, 0.75).setOrigin(0, 0).setScrollFactor(0).setDepth(d)
     this.lisaPortrait = this.add.image(28, 698, `${this.lisa.prefix}_portrait`).setDisplaySize(40, 40).setScrollFactor(0).setDepth(d)
@@ -189,9 +190,11 @@ export default class Street extends Phaser.Scene {
         return { m, bar }
       })
     }
-    this.powerLabel = this.add.text(112, 660, '', { fontFamily: 'Bangers', fontSize: '22px', color: '#ffd166', stroke: '#000', strokeThickness: 4 }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d)
-    this.blitzPlate = this.add.rectangle(372, 660, 112, 28, 0x0b0614, 0.85).setOrigin(1, 0.5).setScrollFactor(0).setDepth(d)
-    this.blitzLabel = this.add.text(366, 660, 'BLITZ ▶▶J', { fontFamily: 'Bangers', fontSize: '20px', color: '#ff5fa2', stroke: '#000', strokeThickness: 4 }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(d)
+    this.powerLabel = this.add.text(392, 660, '', { fontFamily: 'Bangers', fontSize: '22px', color: '#ffd166', stroke: '#000', strokeThickness: 4 }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d)
+    this.blitzPlate = this.add.rectangle(112, 660, 260, 24, 0x0b0614, 0.85).setOrigin(0, 0.5).setStrokeStyle(2, 0xff5fa2, 0.7).setScrollFactor(0).setDepth(d)
+    // the blitz meter fills as it recharges and glows when ready
+    this.blitzFill = this.add.rectangle(114, 660, 256, 20, 0xff5fa2, 0.85).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d)
+    this.blitzLabel = this.add.text(242, 660, 'BLITZ ▶▶J', { fontFamily: 'Bangers', fontSize: '20px', color: '#ff5fa2', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setScrollFactor(0).setDepth(d)
     this.muteLabel = this.add.text(1252, 652, '', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '15px', color: '#b9a6e0' })
       .setOrigin(1, 0).setScrollFactor(0).setDepth(d)
     const foeX = window.__touch ? 960 : 1252 // phones keep the foe's bar left of the buttons
@@ -200,6 +203,9 @@ export default class Street extends Phaser.Scene {
     this.foeBar = this.add.rectangle(foeX - 252, 698, 160, 16, 0xff9a5c).setOrigin(0, 0.5).setScrollFactor(0).setDepth(d).setVisible(false)
     // the masquerade's guest list: how many of each type are still behind a mask
     this.maskHidden = { punch: 0, kick: 0, throw: 0 }
+    // everything above is the HUD strip: it sits at the top while Lisa fights, and drops to the bottom while a card or a talk fills the top
+    this.hudParts = this.children.list.slice(first).map((o) => ({ o, y: o.y }))
+    this.hudTop = null
     this.maskHud = this.add.text(640, 134, '', { fontFamily: 'Bangers', fontSize: '28px', color: '#ffd6c8', stroke: '#000', strokeThickness: 5, backgroundColor: '#140814cc', padding: { x: 12, y: 4 } }).setOrigin(0.5).setScrollFactor(0).setDepth(d).setVisible(false)
   }
 
@@ -1553,6 +1559,18 @@ export default class Street extends Phaser.Scene {
     }
     if (this.tempoLamp) this.tempoLamp.setPosition(this.tempo.x - 34, this.tempo.y + 10).setVisible(this.tempoPost && !this.tempoBusy)
     // hud
+    const top = this.mode === 'brawl' || this.mode === 'dead'
+    if (top !== this.hudTop) {
+      const first = this.hudTop === null
+      this.hudTop = top
+      // the strip (y 676 to 720) goes to y 0 to 44; the line above it (power-ups, blitz) goes just under it
+      this.hudParts.forEach(({ o, y }) => {
+        const to = top ? (y >= 676 ? y - 676 : y - 600) : y
+        this.tweens.killTweensOf(o)
+        if (first) o.y = to
+        else this.tweens.add({ targets: o, y: to, duration: 220, ease: 'Sine.out' })
+      })
+    }
     this.hpBar.setScale(Math.max(0, L.hp / L.maxHp), 1)
     const foe = this.boss && this.so && this.so.active ? this.so : null
     this.foeBar.setVisible(!!foe); this.foeBack.setVisible(!!foe)
@@ -1560,7 +1578,10 @@ export default class Street extends Phaser.Scene {
     const bf = this.bossFight
     if (bf) { this.foeBar.setVisible(true); this.foeBack.setVisible(true); this.foeBar.setScale(Math.max(0, bf.hp / bf.maxHp), 1) }
     this.foeLabel.setX(foe || bf ? 990 : 1252)
-    this.blitzLabel.setColor(this.blitzCd > 0 ? '#6a5a80' : '#ff5fa2').setVisible(this.mode !== 'standoff'); this.blitzPlate.setVisible(this.mode !== 'standoff')
+    const charge = 1 - this.blitzCd / BLITZ_CD, ready = this.blitzCd <= 0
+    this.blitzFill.setScale(Math.max(0.02, charge), 1).setFillStyle(ready ? 0xff5fa2 : 0x7a3a9a, ready ? 0.6 + 0.3 * Math.sin(this.elapsed * 8) : 0.85)
+    this.blitzLabel.setText(window.__touch ? (ready ? 'BLITZ READY' : 'BLITZ') : (ready ? 'BLITZ READY  ▶▶J' : 'BLITZ ▶▶J')).setColor(ready ? '#ffffff' : '#c9b8e8')
+    ;[this.blitzLabel, this.blitzPlate, this.blitzFill].forEach((o) => o.setVisible(this.mode !== 'standoff'))
     this.legend.setVisible(!foe) // the brawl triangle does not apply in standoffs
     if (this.mixParts) this.mixParts.forEach((o) => o.setVisible(!foe))
     if (this.habitBars) {

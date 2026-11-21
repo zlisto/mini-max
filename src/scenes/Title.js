@@ -27,7 +27,7 @@ export default class Title extends Phaser.Scene {
     const save = loadSave()
     const canContinue = save.scene === 'Street' && LEVELS[save.level] && (save.level !== 'w1' || save.checkpoint > 0)
     const label = canContinue ? `PRESS ENTER: CONTINUE ${LEVELS[save.level].title}` : 'PRESS ENTER'
-    const start = this.add.text(640, window.__touch ? 404 : 430, label, { fontFamily: 'Bangers', fontSize: '44px', color: '#fff' }).setOrigin(0.5)
+    const start = this.add.text(640, window.__touch ? 392 : 430, label, { fontFamily: 'Bangers', fontSize: '44px', color: '#fff' }).setOrigin(0.5)
     this.tweens.add({ targets: start, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 })
     start.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.input.keyboard.emit('keydown-ENTER', { repeat: false }))
 
@@ -40,28 +40,47 @@ export default class Title extends Phaser.Scene {
     })
     worlds.push({ id: 'end', label: 'Ending', entries: [['Ending', () => this.scene.start('Ending')]] })
     let sel = Math.max(0, worlds.findIndex((w) => w.id === save.level))
-    this.add.text(640, window.__touch ? 456 : 494, 'LEVEL SELECT   ←/→ world   1/2/3 start', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '16px', color: '#b9a6e0' }).setOrigin(0.5)
+    this.add.text(640, window.__touch ? 440 : 494, 'LEVEL SELECT   ←/→ world   1/2/3 start', { fontFamily: 'Nunito', fontStyle: '800', fontSize: '16px', color: '#b9a6e0' }).setOrigin(0.5)
     const perRow = window.__touch ? Math.ceil(worlds.length / 2) : worlds.length
     const tabs = worlds.map((w, i) => {
       const row = Math.floor(i / perRow), col = i % perRow
       const x = 640 + (col - (perRow - 1) / 2) * Math.min(window.__touch ? 172 : 96, 1180 / perRow)
-      const b = this.add.text(x, window.__touch ? 500 + row * 60 : 526, w.label, { fontFamily: 'Nunito', fontStyle: '800', fontSize: window.__touch ? '26px' : '17px', color: '#fff', backgroundColor: '#2a0f4acc', padding: { x: window.__touch ? 16 : 9, y: window.__touch ? 13 : 5 } })
+      const b = this.add.text(x, window.__touch ? 482 + row * 58 : 526, w.label, { fontFamily: 'Nunito', fontStyle: '800', fontSize: window.__touch ? '26px' : '17px', color: '#fff', backgroundColor: '#2a0f4acc', padding: { x: window.__touch ? 16 : 9, y: window.__touch ? 13 : 5 } })
         .setOrigin(0.5).setInteractive({ useHandCursor: true })
       b.on('pointerdown', () => { sel = i; sfx(this, 'hover'); paint() })
       return b
     })
+    // the chosen world's start points pop up in bright pink right under its tab, with a pointer from the tab, so it's clear they're the way in
     const entryBtns = []
+    const ROLE = ['START', 'MINI-BOSS', 'BOSS']
+    const entryY = window.__touch ? 642 : 604
     const paint = () => {
-      tabs.forEach((b, i) => b.setColor(i === sel ? '#ffd166' : '#fff').setBackgroundColor(i === sel ? '#5a2a8acc' : '#2a0f4acc'))
-      entryBtns.forEach((b) => b.destroy()); entryBtns.length = 0
-      const E = worlds[sel].entries
+      tabs.forEach((b, i) => b.setColor(i === sel ? '#1a0b2e' : '#fff').setBackgroundColor(i === sel ? '#ff5fa2' : '#2a0f4acc'))
+      entryBtns.forEach((b) => { this.tweens.killTweensOf(b); b.destroy() }); entryBtns.length = 0
+      const tab = tabs[sel], E = worlds[sel].entries
+      const gap = 290, span = (E.length - 1) * gap
+      const cx = Phaser.Math.Clamp(tab.x, 150 + span / 2, 1130 - span / 2)
+      // a bouncing pointer under the chosen tab, and a line down to its buttons
+      const tip = tab.y + tab.height / 2 + 4
+      const line = this.add.rectangle(tab.x, (tip + entryY - 34) / 2 + 6, 4, Math.max(0, entryY - 34 - tip - 10), 0xff5fa2, 0.8)
+      const caret = this.add.triangle(tab.x, tip + 8, 0, 0, 22, 0, 11, 14, 0xff5fa2).setOrigin(0.5, 0)
+      this.tweens.add({ targets: caret, y: tip + 13, duration: 380, yoyo: true, repeat: -1, ease: 'Sine.inOut' })
+      entryBtns.push(line, caret)
+      // on phones a top-row tab has another tab under it, so only the matching pink links them
+      const lastRow = !window.__touch || Math.floor(sel / perRow) === Math.floor((worlds.length - 1) / perRow)
+      line.setVisible(lastRow); caret.setVisible(lastRow)
       E.forEach(([label, fn], k) => {
-        const x = 640 + (k - (E.length - 1) / 2) * 300
-        const b = this.add.text(x, window.__touch ? 628 : 578, window.__touch ? label : `${k + 1}  ${label}`, { fontFamily: 'Nunito', fontStyle: '800', fontSize: '19px', color: '#fff', backgroundColor: '#2a0f4acc', padding: { x: 14, y: window.__touch ? 14 : 7 } })
+        const x = cx + (k - (E.length - 1) / 2) * gap
+        const role = E.length > 1 ? ROLE[k] : 'PLAY'
+        const text = `${window.__touch ? '' : `${k + 1}  `}${role} ▶\n${label}`
+        const b = this.add.text(x, entryY, text, { fontFamily: 'Bangers', fontSize: window.__touch ? '26px' : '24px', color: '#1a0b2e', backgroundColor: '#ff5fa2', align: 'center', lineSpacing: -2, padding: { x: 18, y: window.__touch ? 8 : 6 } })
           .setOrigin(0.5).setInteractive({ useHandCursor: true })
         b.on('pointerdown', () => { if (this.leaving) return; this.leaving = true; sfx(this, 'select'); fn() })
-        b.on('pointerover', () => { b.setColor('#ffd166'); sfx(this, 'hover') })
-        b.on('pointerout', () => b.setColor('#fff'))
+        b.on('pointerover', () => { b.setBackgroundColor('#ffd166'); sfx(this, 'hover') })
+        b.on('pointerout', () => b.setBackgroundColor('#ff5fa2'))
+        // they pop in, then breathe a little
+        b.setScale(0.6)
+        this.tweens.add({ targets: b, scale: 1, duration: 220, delay: k * 60, ease: 'Back.out', onComplete: () => this.tweens.add({ targets: b, scale: 1.05, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' }) })
         entryBtns.push(b)
       })
     }
@@ -82,7 +101,7 @@ export default class Title extends Phaser.Scene {
     this.add.text(640, 690, 'Based on A Course in Game Theory by Martin J. Osborne & Ariel Rubinstein (MIT Press, 1994). A fan-made learning game.', {
       fontFamily: 'Nunito', fontStyle: '800', fontSize: '15px', color: '#b9a6e0', align: 'center', wordWrap: { width: 1200 },
     }).setOrigin(0.5)
-    this.add.text(640, 640, 'Move: arrows / WASD    Punch: J    Kick: K    Throw: L    Dash: →→    Blitz: →→J    Talk: Space    Music: M    Pause: Esc', {
+    this.add.text(640, 660, 'Move: arrows / WASD    Punch: J    Kick: K    Throw: L    Dash: →→    Blitz: →→J    Talk: Space    Music: M    Pause: Esc', {
       fontFamily: 'Nunito', fontStyle: '800', fontSize: '18px', color: '#ffffff',
     }).setOrigin(0.5)
   }
